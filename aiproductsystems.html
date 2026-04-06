@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok UG Growth AI System — LIJIAYANG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@400;600;700;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['"Fira Code"', '"Noto Sans SC"', 'monospace'],
+                        sans: ['"Inter"', '"Noto Sans SC"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html { scroll-behavior: smooth; }
+        .lang-zh .tracking-tighter { letter-spacing: 0.02em !important; }
+        .lang-zh .tracking-tight { letter-spacing: 0.02em !important; }
+        .case-main > .case-block + .case-block { border-top: 2px solid #000; }
+        .case-block { padding: 1.5rem 0; }
+        @media (min-width: 768px) {
+            .case-block { padding: 1.75rem 0; }
+        }
+        .case-h2 {
+            font-weight: 900;
+            font-size: 1.5rem;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+        @media (min-width: 768px) {
+            .case-h2 { font-size: 1.875rem; }
+        }
+        .case-meta {
+            font-family: ui-monospace, monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+        }
+    </style>
+</head>
+<body class="bg-white text-black font-sans antialiased selection:bg-black selection:text-white">
+
+    <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b-2 border-black px-4 md:px-8 py-4 flex flex-wrap items-center justify-between gap-4">
+        <a href="index.html#ai-pm-capabilities" class="font-mono text-xs font-bold uppercase tracking-widest border-2 border-black px-3 py-2 hover:bg-black hover:text-white transition-colors">← <span data-i18n="nav_back">Back</span></a>
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="aicommercialization.html#live-gifts" class="font-mono text-[10px] font-bold uppercase tracking-widest border-2 border-black px-2.5 py-2 hover:bg-black hover:text-white transition-colors hidden sm:inline-block" data-i18n="nav_comm">Douyin V →</a>
+            <button type="button" id="lang-toggle" class="font-mono text-xs font-bold border-2 border-black px-3 py-2 hover:bg-black hover:text-white transition-colors uppercase">[ EN / 中 ]</button>
+        </div>
+    </nav>
+
+    <header id="top" class="border-b-2 border-black px-4 md:px-8 py-12 md:py-20 max-w-5xl mx-auto scroll-mt-24">
+        <p class="font-mono text-xs font-bold uppercase tracking-widest text-gray-500 mb-6" data-i18n="hero_tag">Project</p>
+        <h1 class="font-black text-3xl md:text-5xl lg:text-6xl uppercase tracking-tighter leading-[0.95] mb-3" data-i18n="hero_title">TikTok UG Growth AI System</h1>
+        <p class="font-mono text-sm md:text-base font-bold uppercase tracking-wide text-black mb-8 border-l-4 border-black pl-4" data-i18n="hero_role">AI Product Owner &amp; Design Lead</p>
+        <p class="text-lg md:text-2xl font-black text-black max-w-3xl leading-snug border-l-4 border-black pl-6 md:pl-8 py-1" data-i18n="hero_sub"></p>
+    </header>
+
+    <section class="border-b-2 border-black bg-[#f4f4f4] px-4 md:px-8 py-8 md:py-10 max-w-5xl mx-auto">
+        <h2 class="font-mono text-xs font-bold uppercase tracking-widest mb-4" data-i18n="kw_title">Signal vocabulary</h2>
+        <div class="flex flex-wrap gap-2 md:gap-3" id="kw-chips"></div>
+    </section>
+
+    <section id="agent-demo" class="px-4 md:px-8 py-10 md:py-12 border-b-2 border-black bg-white max-w-6xl mx-auto w-full scroll-mt-24">
+        <h2 class="font-black text-xl md:text-2xl uppercase tracking-tighter mb-1 max-w-5xl mx-auto" data-i18n="agent_demo_h2">Agent demonstration</h2>
+        <p class="font-mono text-[10px] text-gray-500 uppercase tracking-widest mb-6 max-w-5xl mx-auto" data-i18n="agent_demo_sub">Landscape demo · production-style UI</p>
+        <div class="max-w-5xl mx-auto">
+            <figure class="relative w-full max-w-full border-2 border-black bg-black shadow-[6px_6px_0_0_#000] overflow-hidden aspect-video">
+                <video class="absolute inset-0 w-full h-full object-contain bg-black" controls playsinline preload="metadata">
+                    <source src="videos/groot.mp4" type="video/mp4">
+                </video>
+            </figure>
+            <p class="text-[10px] md:text-xs text-gray-500 font-mono font-bold uppercase tracking-wide mt-3" data-i18n="agent_demo_cap">videos/groot.mp4</p>
+        </div>
+    </section>
+
+    <main class="case-main max-w-5xl mx-auto px-4 md:px-8 border-b-2 border-black">
+        <section id="problem" class="case-block scroll-mt-24">
+            <h2 class="case-h2" data-i18n="prob_h2">Problem</h2>
+            <div class="text-sm md:text-[15px] font-medium text-gray-800 leading-relaxed space-y-4 max-w-3xl" data-i18n="prob_body"></div>
+        </section>
+
+        <section id="solution" class="case-block scroll-mt-24">
+            <h2 class="case-h2" data-i18n="sol_h2">Solution</h2>
+            <div class="text-sm md:text-[15px] font-medium text-gray-800 leading-relaxed space-y-4 max-w-3xl" data-i18n="sol_body"></div>
+        </section>
+
+        <section id="system" class="case-block scroll-mt-24">
+            <h2 class="case-h2" data-i18n="sys_h2">System design</h2>
+            <p class="case-meta" data-i18n="sys_sub">End-to-end creative loop</p>
+            <div class="max-w-5xl mx-auto mb-8 border-2 border-black bg-white shadow-[6px_6px_0_0_#000] overflow-hidden">
+                <img src="images/agentlianlu.png" alt="Creative production pipeline — User, prompt, model, review, publish" class="w-full h-auto block" />
+            </div>
+            <h3 class="font-black text-sm uppercase mb-3 tracking-tight" data-i18n="sys_core_h">Core components</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+                <article class="border-2 border-black p-4 md:p-5 shadow-[6px_6px_0_0_#000] bg-white min-w-0">
+                    <p class="font-mono text-[10px] font-bold text-gray-500 mb-2" data-i18n="sys_c1_tag">01</p>
+                    <h4 class="font-black text-sm uppercase mb-2" data-i18n="sys_c1_h">Prompt strategy system</h4>
+                    <p class="text-xs md:text-sm text-gray-800 font-medium leading-relaxed" data-i18n="sys_c1_body"></p>
+                </article>
+                <article class="border-2 border-black p-4 md:p-5 shadow-[6px_6px_0_0_#000] bg-white min-w-0">
+                    <p class="font-mono text-[10px] font-bold text-gray-500 mb-2" data-i18n="sys_c2_tag">02</p>
+                    <h4 class="font-black text-sm uppercase mb-2" data-i18n="sys_c2_h">Model orchestration</h4>
+                    <p class="text-xs md:text-sm text-gray-800 font-medium leading-relaxed" data-i18n="sys_c2_body"></p>
+                </article>
+                <article class="border-2 border-black p-4 md:p-5 shadow-[6px_6px_0_0_#000] bg-white min-w-0">
+                    <p class="font-mono text-[10px] font-bold text-gray-500 mb-2" data-i18n="sys_c3_tag">03</p>
+                    <h4 class="font-black text-sm uppercase mb-2" data-i18n="sys_c3_h">Review workflow</h4>
+                    <p class="text-xs md:text-sm text-gray-800 font-medium leading-relaxed" data-i18n="sys_c3_body"></p>
+                </article>
+                <article class="border-2 border-black p-4 md:p-5 shadow-[6px_6px_0_0_#000] bg-white min-w-0">
+                    <p class="font-mono text-[10px] font-bold text-gray-500 mb-2" data-i18n="sys_c4_tag">04</p>
+                    <h4 class="font-black text-sm uppercase mb-2" data-i18n="sys_c4_h">Asset pipeline</h4>
+                    <p class="text-xs md:text-sm text-gray-800 font-medium leading-relaxed" data-i18n="sys_c4_body"></p>
+                </article>
+            </div>
+        </section>
+
+        <section id="impact" class="case-block scroll-mt-24">
+            <h2 class="case-h2" data-i18n="impact_h2">Impact</h2>
+            <p class="case-meta" data-i18n="impact_sub">Outcomes at a glance</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 max-w-4xl">
+                <article class="border-2 border-black p-5 md:p-6 shadow-[6px_6px_0_0_#000] bg-white">
+                    <p class="font-mono text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2" data-i18n="imp_1_l">Workflow time</p>
+                    <p class="font-black text-2xl md:text-3xl tracking-tight leading-tight" data-i18n="imp_1_v"></p>
+                </article>
+                <article class="border-2 border-black p-5 md:p-6 shadow-[6px_6px_0_0_#000] bg-white">
+                    <p class="font-mono text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2" data-i18n="imp_2_l">Production efficiency</p>
+                    <p class="font-black text-2xl md:text-3xl tracking-tight leading-tight" data-i18n="imp_2_v"></p>
+                </article>
+                <article class="border-2 border-black p-5 md:p-6 shadow-[6px_6px_0_0_#000] bg-white">
+                    <p class="font-mono text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2" data-i18n="imp_3_l">ASO assets</p>
+                    <p class="font-black text-2xl md:text-3xl tracking-tight leading-tight" data-i18n="imp_3_v"></p>
+                </article>
+                <article class="border-2 border-black p-5 md:p-6 shadow-[6px_6px_0_0_#000] bg-white">
+                    <p class="font-mono text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2" data-i18n="imp_4_l">Campaign coverage</p>
+                    <p class="font-black text-2xl md:text-3xl tracking-tight leading-tight" data-i18n="imp_4_v"></p>
+                </article>
+                <article class="border-2 border-black p-5 md:p-6 shadow-[6px_6px_0_0_#000] bg-white sm:col-span-2">
+                    <p class="font-mono text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2" data-i18n="imp_5_l">Down-funnel scale</p>
+                    <p class="font-black text-2xl md:text-3xl tracking-tight leading-snug" data-i18n="imp_5_v"></p>
+                </article>
+            </div>
+        </section>
+
+        <section id="role" class="case-block scroll-mt-24">
+            <h2 class="case-h2" data-i18n="role_h2">My role</h2>
+            <p class="case-meta" data-i18n="role_tag"></p>
+            <p class="text-sm md:text-base font-bold text-black mb-4 max-w-3xl" data-i18n="role_title_line"></p>
+            <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mb-3" data-i18n="role_resp_h">Responsible for</p>
+            <ul class="space-y-2 font-medium text-sm text-gray-900 max-w-3xl" data-i18n="role_list"></ul>
+        </section>
+
+        <section id="ai-cap" class="case-block scroll-mt-24">
+            <h2 class="case-h2" data-i18n="aicap_h2">AI capabilities</h2>
+            <p class="case-meta" data-i18n="aicap_sub">Technical depth</p>
+            <ul class="list-none space-y-2 border-l-2 border-black pl-4 max-w-3xl text-sm md:text-[15px] font-medium text-gray-800 leading-relaxed" data-i18n="aicap_list"></ul>
+        </section>
+
+        <section id="learnings" class="case-block scroll-mt-24 pb-8 md:pb-10">
+            <h2 class="case-h2" data-i18n="learn_h2">Agent Phase 2 (in progress)</h2>
+            <p class="case-meta" data-i18n="learn_sub">GIGA × Groot · embedded preview</p>
+            <div class="max-w-5xl border-2 border-black bg-[#070707] shadow-[6px_6px_0_0_#000] overflow-hidden">
+                <iframe title="GIGA × Groot — start from landing, then open Agent from the page" class="w-full border-0 bg-[#070707] block" style="height: min(72vh, 780px); min-height: 480px;" src="GIGA%2AGroot/index.html"></iframe>
+            </div>
+            <div class="mt-8 md:mt-10 max-w-5xl border-2 border-black bg-white p-5 md:p-8 shadow-[6px_6px_0_0_#000] text-sm md:text-[15px] font-medium text-gray-900 leading-relaxed" data-i18n="learn_features"></div>
+        </section>
+    </main>
+
+    <footer class="py-8 px-4 md:px-8 border-t-2 border-black flex flex-wrap justify-between gap-4 text-[10px] font-bold uppercase tracking-widest bg-black text-white">
+        <span>© 2026 LIJIAYANG</span>
+        <a href="index.html" class="hover:underline" data-i18n="nav_home">Home</a>
+    </footer>
+
+    <script>
+        const chipsEn = [
+            'AI Agent', 'Model orchestration', 'User growth', 'Solving business pain points'
+        ];
+        const chipsZh = [
+            'AI Agent', '模型编排', '用户增长', '解决业务痛点'
+        ];
+
+        const translations = {
+            en: {
+                nav_back: 'Back', nav_home: 'Home',
+                nav_comm: 'Douyin V →',
+                hero_tag: 'Project',
+                hero_title: 'TikTok UG Growth AI System',
+                hero_role: 'AI Product Owner &amp; Design Lead',
+                hero_sub: 'Drove AIGC from <strong>assistive design</strong> to a <strong>scalable, reusable growth infrastructure platform</strong>.',
+                kw_title: 'Signal vocabulary',
+                agent_demo_h2: 'Agent demonstration',
+                agent_demo_sub: 'Landscape playback · product UI capture',
+                agent_demo_cap: 'File: <code class="font-mono text-[11px]">videos/groot.mp4</code>',
+                prob_h2: 'Problem',
+                prob_body: `<p>TikTok UG growth relies heavily on <strong>large-scale visual creatives</strong>. The production pipeline faced:</p>
+                    <ul class="list-none space-y-2 mt-3">
+                        <li><span class="text-black font-bold">·</span> <strong>Fragmented workflows</strong> across Lite / Main / Pro surfaces</li>
+                        <li><span class="text-black font-bold">·</span> <strong>Heavy manual dependency</strong> in creative generation</li>
+                        <li><span class="text-black font-bold">·</span> <strong>Low iteration efficiency</strong> under frequent campaign changes</li>
+                        <li><span class="text-black font-bold">·</span> <strong>Difficulty maintaining quality consistency</strong> at scale</li>
+                    </ul>
+                    <p class="pt-3">As campaign volume increased, the traditional design workflow became the <strong>bottleneck for growth efficiency</strong>.</p>`,
+                sol_h2: 'Solution',
+                sol_body: `<p>Designed and built an <strong>AI Agent–based creative production system</strong>.</p>
+                    <p class="font-black text-black uppercase text-xs tracking-wide mt-4 mb-2">Key ideas</p>
+                    <ul class="list-none space-y-2">
+                        <li><span class="text-black font-bold">·</span> Identified <strong>critical points</strong> in the visual production workflow</li>
+                        <li><span class="text-black font-bold">·</span> Abstracted reusable logic into modular <strong>Growth Agents</strong></li>
+                        <li><span class="text-black font-bold">·</span> Built a closed-loop pipeline: <strong>Prompt → Generate → Review → Publish</strong></li>
+                    </ul>
+                    <p class="pt-3">This transformed execution from <strong>manual work</strong> into <strong>programmable creative infrastructure</strong>.</p>`,
+                sys_h2: 'System design',
+                sys_sub: 'Architecture &amp; components',
+                sys_core_h: 'Core components',
+                sys_c1_tag: '01',
+                sys_c1_h: 'Prompt strategy system',
+                sys_c1_body: 'Reusable prompt frameworks tuned for different campaign types and channels.',
+                sys_c2_tag: '02',
+                sys_c2_h: 'Model orchestration',
+                sys_c2_body: 'Multiple models connected through structured workflows and handoffs.',
+                sys_c3_tag: '03',
+                sys_c3_h: 'Review workflow',
+                sys_c3_body: 'Automatic checks plus human checkpoints before publish.',
+                sys_c4_tag: '04',
+                sys_c4_h: 'Asset pipeline',
+                sys_c4_body: 'End-to-end creative lifecycle: <strong>Generate → Edit → Validate → Deliver</strong>.',
+                impact_h2: 'Impact',
+                impact_sub: 'Metrics that matter',
+                imp_1_l: 'Workflow time',
+                imp_1_v: '<span class="text-gray-600 font-bold text-xl md:text-2xl">3 days</span> → <span class="text-black">1.5 hours</span>',
+                imp_2_l: 'Production efficiency',
+                imp_2_v: '<span class="text-black">+97.2%</span> vs baseline',
+                imp_3_l: 'ASO asset creation',
+                imp_3_v: '<span class="text-black">30 minutes</span> · <span class="text-black">98%</span> faster',
+                imp_4_l: 'UG campaign formats',
+                imp_4_v: '<span class="text-black">20+</span> supported',
+                imp_5_l: 'Attributed scale',
+                imp_5_v: 'Assets contributed to <span class="text-black">13M+</span> acquisitions and <span class="text-black">7M+</span> activations',
+                role_h2: 'My role',
+                role_tag: 'Scope',
+                role_title_line: 'AI Product Owner &amp; Design Lead',
+                role_resp_h: 'Responsible for',
+                role_list: `<li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">01</span><span>Defining product vision and roadmap</span></li>
+                    <li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">02</span><span>Designing AI-driven workflow architecture</span></li>
+                    <li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">03</span><span>Building prompt and interaction strategies</span></li>
+                    <li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">04</span><span>Leading cross-functional collaboration</span></li>
+                    <li class="flex gap-2"><span class="font-mono text-gray-400 shrink-0 text-xs">05</span><span>Driving model adoption into production</span></li>`,
+                aicap_h2: 'AI capabilities',
+                aicap_sub: 'What shipped in practice',
+                aicap_list: `<li><span class="text-black font-bold">·</span> <strong>Prompt engineering</strong> for multi-stage generation</li>
+                    <li><span class="text-black font-bold">·</span> <strong>LoRA training</strong> for regional visual styles</li>
+                    <li><span class="text-black font-bold">·</span> <strong>Agent workflow design</strong></li>
+                    <li><span class="text-black font-bold">·</span> <strong>AI-assisted asset lifecycle</strong> management</li>
+                    <li><span class="text-black font-bold">·</span> <strong>Model evaluation</strong> and iteration strategy</li>`,
+                learn_h2: 'Agent Phase 2 (in progress)',
+                learn_sub: 'Opens landing (index) · navigate to Agent via Get started / Design now inside the preview',
+                learn_features: `<p class="font-black text-black text-sm uppercase tracking-wide border-b-2 border-black pb-2 mb-5 inline-block">New Agents</p>
+                    <ol class="list-decimal pl-5 space-y-5 marker:font-black marker:text-black">
+                    <li><strong>Viral replication (Data Intelligence Agent)</strong>
+                        <ul class="list-none mt-2 space-y-1.5 pl-0">
+                            <li><span class="text-black font-bold">·</span> <strong>Growth / Ads</strong>: Steer new creative directions with historical data—fewer wrong turns.</li>
+                            <li><span class="text-black font-bold">·</span> <strong>Design / Ops</strong>: One-click application of shared recommendations—less rework.</li>
+                            <li><span class="text-black font-bold">·</span> <strong>Legal</strong>: Reduce non-compliant phrasing—fewer rejections.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Store screenshots Agent</strong>: Generate store visuals quickly; adjust copy and layout details to accelerate product/ops A/B test iteration.</li>
+                    <li><strong>Extension design Agent</strong>: Extend visual campaigns fast—one-click playbook reskins; refine locally with chat and prompt editing.</li>
+                    <li><strong>Video generation Agent</strong>: Fast iteration for short dramas, promos, store videos, TTS video, and more—replication, storyboard analysis, decomposed generation; AI-assisted editing to follow.</li>
+                    <li><strong>Localized promotion Agent</strong>: From a one-line brief or an uploaded image, generate localized themes and copy; create promotion visuals from the content.</li>
+                    </ol>`,
+            },
+            zh: {
+                nav_back: '返回', nav_home: '首页',
+                nav_comm: '抖音 V →',
+                hero_tag: '项目',
+                hero_title: 'TikTok UG Growth AI System',
+                hero_role: 'AI 产品负责人 &amp; 设计负责人',
+                hero_sub: '推动 AIGC 从「辅助设计」升级为可规模化复用的增长基础设施平台。',
+                kw_title: '关键词',
+                agent_demo_h2: 'Agent 演示',
+                agent_demo_sub: '横屏播放 · 产品界面录屏',
+                agent_demo_cap: '文件：<code class="font-mono text-[11px]">videos/groot.mp4</code>',
+                prob_h2: '问题',
+                prob_body: `<p>TikTok UG 增长高度依赖 <strong>大规模视觉素材</strong>，但生产管线存在：</p>
+                    <ul class="list-none space-y-2 mt-3">
+                        <li><span class="text-black font-bold">·</span> <strong>流程割裂</strong>：Lite / Main / Pro 等多端协同成本高</li>
+                        <li><span class="text-black font-bold">·</span> <strong>强人工依赖</strong>：创意生成大量依赖手搓</li>
+                        <li><span class="text-black font-bold">·</span> <strong>迭代效率低</strong>：大促与 campaign 频繁变更下难以及时响应</li>
+                        <li><span class="text-black font-bold">·</span> <strong>质量一致性难</strong>：规模放大后风格与标准难统一</li>
+                    </ul>
+                    <p class="pt-3">随着 campaign 体量上升，传统设计工作流成为 <strong>增长效率的瓶颈</strong>。</p>`,
+                sol_h2: '解决方案',
+                sol_body: `<p>设计并落地 <strong>基于 AI Agent 的创意生产系统</strong>。</p>
+                    <p class="font-black text-black uppercase text-xs tracking-wide mt-4 mb-2">核心思路</p>
+                    <ul class="list-none space-y-2">
+                        <li><span class="text-black font-bold">·</span> 识别视觉生产链路中的 <strong>关键节点</strong></li>
+                        <li><span class="text-black font-bold">·</span> 将可复用逻辑抽象为模块化 <strong>Growth Agents</strong></li>
+                        <li><span class="text-black font-bold">·</span> 构建闭环：<strong>Prompt → 生成 → 评审 → 发布</strong></li>
+                    </ul>
+                    <p class="pt-3">把工作流从 <strong>人工执行</strong> 升级为 <strong>可编程的创意基础设施</strong>。</p>`,
+                sys_h2: '系统设计',
+                sys_sub: '架构与模块',
+                sys_core_h: '核心模块',
+                sys_c1_tag: '01',
+                sys_c1_h: 'Prompt 策略体系',
+                sys_c1_body: '针对不同 campaign 类型与渠道沉淀可复用的 Prompt 框架。',
+                sys_c2_tag: '02',
+                sys_c2_h: '模型编排',
+                sys_c2_body: '以结构化工作流串联多模型与交接环节。',
+                sys_c3_tag: '03',
+                sys_c3_h: '评审工作流',
+                sys_c3_body: '自动校验叠加人工卡点，再进入发布。',
+                sys_c4_tag: '04',
+                sys_c4_h: '资产管线',
+                sys_c4_body: '端到端创意生命周期：<strong>生成 → 编辑 → 校验 → 交付</strong>。',
+                impact_h2: '结果',
+                impact_sub: '关键指标',
+                imp_1_l: '工作流耗时',
+                imp_1_v: '<span class="text-gray-600 font-bold text-xl md:text-2xl">3 天</span> → <span class="text-black">1.5 小时</span>',
+                imp_2_l: '生产效率',
+                imp_2_v: '较基线 <span class="text-black">+97.2%</span>',
+                imp_3_l: 'ASO 素材产出',
+                imp_3_v: '<span class="text-black">30 分钟</span> · 提速 <span class="text-black">98%</span>',
+                imp_4_l: 'UG 活动形态',
+                imp_4_v: '支撑 <span class="text-black">20+</span> 种格式',
+                imp_5_l: '归因规模',
+                imp_5_v: '素材侧贡献 <span class="text-black">1300 万+</span> 获客、<span class="text-black">700 万+</span> 激活',
+                role_h2: '我的角色',
+                role_tag: '范围',
+                role_title_line: 'AI 产品负责人 &amp; 设计负责人',
+                role_resp_h: '职责包括',
+                role_list: `<li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">01</span><span>产品愿景与路线图定义</span></li>
+                    <li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">02</span><span>AI 驱动的工作流架构设计</span></li>
+                    <li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">03</span><span>Prompt 与交互策略搭建</span></li>
+                    <li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">04</span><span>跨职能协同推进</span></li>
+                    <li class="flex gap-2"><span class="font-mono text-gray-400 shrink-0 text-xs">05</span><span>推动模型能力进入生产环境</span></li>`,
+                aicap_h2: 'AI 能力',
+                aicap_sub: '落地技术栈',
+                aicap_list: `<li><span class="text-black font-bold">·</span> 多阶段生成的 <strong>Prompt 工程</strong></li>
+                    <li><span class="text-black font-bold">·</span> 区域视觉风格的 <strong>LoRA 训练</strong></li>
+                    <li><span class="text-black font-bold">·</span> <strong>Agent 工作流</strong> 设计</li>
+                    <li><span class="text-black font-bold">·</span> <strong>AI 辅助资产全生命周期</strong> 管理</li>
+                    <li><span class="text-black font-bold">·</span> <strong>模型评测</strong> 与迭代策略</li>`,
+                learn_h2: 'Agent 二阶段（正在进行）',
+                learn_sub: '先加载落地页（index）· 在预览内通过「开始使用 / 立即设计」等进入 Agent',
+                learn_features: `<p class="font-black text-black text-sm uppercase tracking-wide border-b-2 border-black pb-2 mb-5 inline-block">新增功能 Agent</p>
+                    <ol class="list-decimal pl-5 space-y-5 marker:font-black marker:text-black">
+                    <li><strong>爆款复刻（数据智荐 Agent）</strong>
+                        <ul class="list-none mt-2 space-y-1.5 pl-0">
+                            <li><span class="text-black font-bold">·</span> <strong>增长/投放</strong>：用历史数据指导新创意方向，少走弯路</li>
+                            <li><span class="text-black font-bold">·</span> <strong>设计/运营</strong>：直接拿共性建议做一键套用，少返工</li>
+                            <li><span class="text-black font-bold">·</span> <strong>法务</strong>：避免违规表达，少驳回</li>
+                        </ul>
+                    </li>
+                    <li><strong>商店图 Agent</strong>：可快速生成商店图内容，并可调整商店图文字、排版细节，加速产运 A/B test 的策略迭代</li>
+                    <li><strong>延展设计 Agent</strong>：为视觉活动快速延展，一键产出一套玩法换肤内容，并可通过对话能力与 prompt 编辑能力进行局部修改</li>
+                    <li><strong>视频生成 Agent</strong>：针对短剧、宣传视频、商店视频、TTS 视频等场景的快速迭代，可以进行视频复刻、分镜分析、拆解生成，后续将推进 AI 剪辑能力进入</li>
+                    <li><strong>本地化推广 Agent</strong>：根据一句话描述/上传图片，生成一系列符合本地化推广的主题、文案，并可根据内容进行推广图生成</li>
+                    </ol>`,
+            }
+        };
+
+        function renderChips(lang) {
+            const el = document.getElementById('kw-chips');
+            const list = lang === 'zh' ? chipsZh : chipsEn;
+            el.innerHTML = list.map(t =>
+                `<span class="inline-block border-2 border-black px-3 py-1.5 text-xs font-bold uppercase tracking-wide bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">${t}</span>`
+            ).join('');
+        }
+
+        function setLanguage(lang) {
+            document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'en';
+            document.body.classList.toggle('lang-zh', lang === 'zh');
+            const dict = translations[lang];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const k = el.getAttribute('data-i18n');
+                if (dict[k] != null) el.innerHTML = dict[k];
+            });
+            renderChips(lang);
+            const btn = document.getElementById('lang-toggle');
+            if (lang === 'en') {
+                btn.innerHTML = '[ EN / <span class="opacity-40">中</span> ]';
+            } else {
+                btn.innerHTML = '[ <span class="opacity-40">EN</span> / 中 ]';
+            }
+            document.title = lang === 'zh'
+                ? 'TikTok UG Growth AI System — LIJIAYANG'
+                : 'TikTok UG Growth AI System — LIJIAYANG';
+        }
+
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+            const zh = document.body.classList.contains('lang-zh');
+            setLanguage(zh ? 'en' : 'zh');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => setLanguage('en'));
+    </script>
+</body>
+</html>

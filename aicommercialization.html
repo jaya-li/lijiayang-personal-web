@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Douyin V Project | AI Product Systems — LIJIAYANG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@400;600;700;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['"Fira Code"', '"Noto Sans SC"', 'monospace'],
+                        sans: ['"Inter"', '"Noto Sans SC"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html { scroll-behavior: smooth; }
+        .lang-zh .tracking-tighter { letter-spacing: 0.02em !important; }
+        .lang-zh .tracking-tight { letter-spacing: 0.02em !important; }
+        /* 竖版 9:16 — 素材建议 1080×1920（竖屏；口语里常与「1920 竖版」对应） */
+        .vertical-frame {
+            position: relative;
+            aspect-ratio: 9 / 16;
+            width: min(100%, 280px);
+            border: 2px solid #000;
+            background: #e5e7eb;
+            box-shadow: 6px 6px 0 0 #000;
+            overflow: hidden;
+        }
+        .vertical-frame video,
+        .vertical-frame img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        /* AI 分身：多帧动画 WebP 横滑条（与礼物区一致的 6px 硬阴影） */
+        .avatar-anim-frame {
+            position: relative;
+            aspect-ratio: 9 / 16;
+            width: min(200px, 72vw);
+            flex-shrink: 0;
+            border: 2px solid #000;
+            background: #e5e7eb;
+            box-shadow: 6px 6px 0 0 #000;
+            overflow: hidden;
+        }
+        @media (min-width: 1024px) {
+            .avatar-anim-frame { width: min(176px, 16vw); }
+        }
+        .avatar-anim-frame img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        /* AI Live Gifts：按视频真实分辨率比例缩放，宽度不超过所在列 */
+        .gift-video-figure {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            max-width: 100%;
+            aspect-ratio: 9 / 16;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .gift-video-figure.gift-video-sized {
+            aspect-ratio: auto;
+        }
+        .gift-video-figure video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #e5e7eb;
+        }
+        .case-h2 {
+            font-weight: 900;
+            font-size: 1.5rem;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+        @media (min-width: 768px) {
+            .case-h2 { font-size: 1.875rem; }
+        }
+        .case-meta {
+            font-family: ui-monospace, monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+        }
+        /* AI 直播礼物 · 链路图（与页面统一的黑白 + 浅底强调） */
+        .gift-pipeline-svg text {
+            font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+            fill: #000;
+        }
+        .gift-pipeline-svg .np { fill: #dcecf8; stroke: #000; stroke-width: 2; }
+        .gift-pipeline-svg .nm { fill: #fff4d4; stroke: #000; stroke-width: 2; }
+        .gift-pipeline-svg .nd { fill: #fff4d4; stroke: #000; stroke-width: 2; }
+        .gift-pipeline-svg .dash-group { fill: #fafafa; stroke: #000; stroke-width: 2; stroke-dasharray: 6 4; }
+        .gift-pipeline-svg .edge { fill: none; stroke: #000; stroke-width: 1.5; }
+        .gift-pipeline-svg .edge-dashed { fill: none; stroke: #000; stroke-width: 1.5; stroke-dasharray: 5 4; }
+        .gift-pipeline-svg .lbl { font-size: 8px; font-weight: 600; }
+        .gift-pipeline-svg .lbl-sm { font-size: 7.5px; font-weight: 500; }
+        .gift-pipeline-svg .title { font-size: 9.5px; font-weight: 800; }
+        .gift-pipeline-svg .bullet { font-size: 7.5px; font-weight: 500; }
+        .gift-pipeline-svg .t2 { font-size: 7.5px; font-weight: 800; }
+        /* AI 分身 · ComfyUI 产线拓扑（与礼物链路图同一套节点/边样式） */
+        .avatar-pipeline-svg { display: block; }
+        .avatar-pipeline-svg .np { fill: #dcecf8; stroke: #000; stroke-width: 2; }
+        .avatar-pipeline-svg .nm { fill: #fff4d4; stroke: #000; stroke-width: 2; }
+        .avatar-pipeline-svg .dash-node { fill: #fafafa; stroke: #000; stroke-width: 2; stroke-dasharray: 6 4; }
+        .avatar-pipeline-svg .edge { fill: none; stroke: #000; stroke-width: 1.75; }
+        .avatar-pipeline-svg .edge-dashed { fill: none; stroke: #000; stroke-width: 1.5; stroke-dasharray: 5 4; }
+        .avatar-pipeline-svg .t { font-size: 9px; font-weight: 800; }
+        .avatar-pipeline-svg .ts { font-size: 6.75px; font-weight: 600; }
+        .avatar-pipeline-svg .tx { font-size: 6.5px; font-weight: 500; fill: #374151; }
+        .avatar-pipeline-svg text {
+            font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+        }
+        .avatar-pipeline-svg .t, .avatar-pipeline-svg .ts { fill: #000; }
+    </style>
+</head>
+<body class="bg-white text-black font-sans antialiased selection:bg-black selection:text-white">
+
+    <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b-2 border-black px-4 md:px-8 py-4 flex flex-wrap items-center justify-between gap-4">
+        <a href="index.html#ai-pm-capabilities" class="font-mono text-xs font-bold uppercase tracking-widest border-2 border-black px-3 py-2 hover:bg-black hover:text-white transition-colors">← <span data-i18n="nav_back">Back</span></a>
+        <button type="button" id="lang-toggle" class="font-mono text-xs font-bold border-2 border-black px-3 py-2 hover:bg-black hover:text-white transition-colors uppercase">[ EN / 中 ]</button>
+    </nav>
+
+    <header class="border-b-2 border-black px-4 md:px-8 py-12 md:py-16 max-w-5xl mx-auto">
+        <p class="font-mono text-xs font-bold uppercase tracking-widest text-gray-500 mb-6" data-i18n="hero_tag">Program</p>
+        <h1 class="font-black text-4xl md:text-6xl lg:text-7xl uppercase tracking-tighter leading-[0.95] mb-8" data-i18n="hero_title">Douyin V Project</h1>
+        <p class="text-lg md:text-xl font-medium text-gray-700 max-w-3xl leading-relaxed border-l-4 border-black pl-6" data-i18n="hero_sub">
+            Validated the commercial viability of AI avatars and AI live gifts in the Douyin creator ecosystem, and built multi-dimensional evaluation methods oriented toward business delivery.
+        </p>
+    </header>
+
+    <section class="border-b-2 border-black bg-[#f4f4f4] px-4 md:px-8 py-8 md:py-10 max-w-5xl mx-auto">
+        <h2 class="font-mono text-xs font-bold uppercase tracking-widest mb-4" data-i18n="kw_title">Signal vocabulary</h2>
+        <div class="flex flex-wrap gap-2 md:gap-3" id="kw-chips"></div>
+    </section>
+
+    <!-- 子项目一：AI 直播礼物 · 竖版 GIF / 视频（无 Before/After） -->
+    <section id="live-gifts" class="px-4 md:px-8 py-10 md:py-14 border-b-2 border-black bg-[#f4f4f4] max-w-6xl mx-auto w-full scroll-mt-24">
+        <h2 class="font-black text-3xl md:text-5xl uppercase tracking-tighter mb-2 max-w-5xl mx-auto" data-i18n="gifts_h2">AI Live Gifts</h2>
+
+        <div class="max-w-5xl mx-auto mb-10 text-left">
+            <h3 class="case-h2 !normal-case !text-2xl md:!text-3xl !mb-1" data-i18n="gifts_brief_h3">AIGC gift refinement / fusion</h3>
+            <div class="space-y-5 md:space-y-6">
+                <div>
+                    <h4 class="font-black text-base md:text-lg uppercase tracking-tight mb-0.5" data-i18n="gifts_brief_ctx_h">Project context</h4>
+                    <div class="text-sm md:text-[15px] font-medium text-gray-800 leading-relaxed space-y-3 max-w-3xl" data-i18n="gifts_brief_ctx_body"></div>
+                </div>
+                <div class="border-t border-black pt-5 md:pt-6">
+                    <h4 class="font-black text-base md:text-lg uppercase tracking-tight mb-0.5" data-i18n="gifts_brief_cols_h">Scope</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-4 lg:gap-6 items-start">
+                        <div class="border-l-2 border-gray-300 pl-4 min-w-0">
+                            <h5 class="font-black text-sm uppercase mb-2 tracking-tight" data-i18n="gifts_brief_col1_h">Fusion logic</h5>
+                            <ul class="list-none space-y-1.5 text-xs md:text-sm font-medium text-gray-800 leading-relaxed" data-i18n="gifts_brief_col1_list"></ul>
+                        </div>
+                        <div class="border-l-2 border-gray-300 pl-4 min-w-0">
+                            <h5 class="font-black text-sm uppercase mb-2 tracking-tight" data-i18n="gifts_brief_col2_h">Quality tiers</h5>
+                            <div class="text-xs md:text-sm font-medium text-gray-800 leading-relaxed space-y-2" data-i18n="gifts_brief_col2_body"></div>
+                        </div>
+                        <div class="border-l-2 border-gray-300 pl-4 min-w-0">
+                            <h5 class="font-black text-sm uppercase mb-2 tracking-tight" data-i18n="gifts_brief_col3_h">Goals &amp; two-shot</h5>
+                            <ul class="list-none space-y-1.5 text-xs md:text-sm font-medium text-gray-800 leading-relaxed" data-i18n="gifts_brief_col3_list"></ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-t border-black pt-5 md:pt-6">
+                    <h4 class="font-black text-base md:text-lg uppercase tracking-tight mb-0.5" data-i18n="gifts_brief_role_h">My role</h4>
+                    <ul class="space-y-2 font-medium text-sm text-gray-900 max-w-3xl" data-i18n="gifts_brief_role_list"></ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="live-gifts-grid" class="max-w-[1920px] mx-auto grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-10 xl:gap-6 items-start">
+            <div class="gift-video-col flex flex-col gap-3 min-w-0">
+                <div class="gift-case-desc text-left text-[11px] md:text-xs font-medium text-gray-900 leading-relaxed space-y-2 border-l-2 border-black pl-3" data-i18n="gifts_case_1"></div>
+                <figure class="gift-video-figure border-2 border-black bg-gray-200 shadow-[6px_6px_0_0_#000]">
+                    <video class="z-[1] opacity-0 transition-opacity duration-300" data-dv-video data-gift-intrinsic muted loop playsinline controls preload="metadata">
+                        <source src="videos/ailiwu1.mp4" type="video/mp4">
+                    </video>
+                    <div class="absolute inset-0 z-0 flex items-center justify-center p-4 text-center bg-gray-200" data-dv-fallback>
+                        <span class="text-[10px] font-mono font-bold uppercase text-gray-500 leading-relaxed whitespace-pre-line" data-i18n="gifts_ph_1">videos/ailiwu1.mp4</span>
+                    </div>
+                </figure>
+            </div>
+            <div class="gift-video-col flex flex-col gap-3 min-w-0">
+                <div class="gift-case-desc text-left text-[11px] md:text-xs font-medium text-gray-900 leading-relaxed space-y-2 border-l-2 border-black pl-3" data-i18n="gifts_case_2"></div>
+                <figure class="gift-video-figure border-2 border-black bg-gray-200 shadow-[6px_6px_0_0_#000]">
+                    <video class="z-[1] opacity-0 transition-opacity duration-300" data-dv-video data-gift-intrinsic muted loop playsinline controls preload="metadata">
+                        <source src="videos/ailiwu2.mp4" type="video/mp4">
+                    </video>
+                    <div class="absolute inset-0 z-0 flex items-center justify-center p-4 text-center bg-gray-200" data-dv-fallback>
+                        <span class="text-[10px] font-mono font-bold uppercase text-gray-500 leading-relaxed whitespace-pre-line" data-i18n="gifts_ph_2">videos/ailiwu2.mp4</span>
+                    </div>
+                </figure>
+            </div>
+            <div class="gift-video-col flex flex-col gap-3 min-w-0">
+                <div class="gift-case-desc text-left text-[11px] md:text-xs font-medium text-gray-900 leading-relaxed space-y-2 border-l-2 border-black pl-3" data-i18n="gifts_case_3"></div>
+                <figure class="gift-video-figure border-2 border-black bg-gray-200 shadow-[6px_6px_0_0_#000]">
+                    <video class="z-[1] opacity-0 transition-opacity duration-300" data-dv-video data-gift-intrinsic muted loop playsinline controls preload="metadata">
+                        <source src="videos/ailiwu3.mp4" type="video/mp4">
+                    </video>
+                    <div class="absolute inset-0 z-0 flex items-center justify-center p-4 text-center bg-gray-200" data-dv-fallback>
+                        <span class="text-[10px] font-mono font-bold uppercase text-gray-500 leading-relaxed whitespace-pre-line" data-i18n="gifts_ph_3">videos/ailiwu3.mp4</span>
+                    </div>
+                </figure>
+            </div>
+            <div class="gift-video-col flex flex-col gap-3 min-w-0">
+                <div class="gift-case-desc text-left text-[11px] md:text-xs font-medium text-gray-900 leading-relaxed space-y-2 border-l-2 border-black pl-3" data-i18n="gifts_case_4"></div>
+                <figure class="gift-video-figure border-2 border-black bg-gray-200 shadow-[6px_6px_0_0_#000]">
+                    <video class="z-[1] opacity-0 transition-opacity duration-300" data-dv-video data-gift-intrinsic muted loop playsinline controls preload="metadata">
+                        <source src="videos/ailiwu4.mp4" type="video/mp4">
+                    </video>
+                    <div class="absolute inset-0 z-0 flex items-center justify-center p-4 text-center bg-gray-200" data-dv-fallback>
+                        <span class="text-[10px] font-mono font-bold uppercase text-gray-500 leading-relaxed whitespace-pre-line" data-i18n="gifts_ph_4">videos/ailiwu4.mp4</span>
+                    </div>
+                </figure>
+            </div>
+        </div>
+
+        <!-- 礼物生成链路图（与源图拓扑一致，左→右） -->
+        <div class="mt-14 pt-10 border-t-2 border-dashed border-black max-w-[100vw] mx-auto">
+            <h3 class="font-black text-xl md:text-2xl uppercase tracking-tighter mb-1 max-w-5xl mx-auto px-1" data-i18n="gifts_pipeline_h3">Gift generation pipeline</h3>
+            <p class="font-mono text-[10px] text-gray-500 uppercase tracking-widest mb-4 max-w-5xl mx-auto px-1" data-i18n="gifts_pipeline_sub">Linkage · same topology as source diagram</p>
+            <div class="overflow-x-auto pb-6 -mx-4 px-4 md:mx-0 md:px-0">
+                <svg class="gift-pipeline-svg w-[2280px] max-w-none h-auto block mx-auto" viewBox="0 0 2280 330" role="img" aria-label="礼物生成链路">
+                    <defs>
+                        <marker id="gp-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                            <path d="M0,0 L7,3.5 L0,7 z" fill="#000"/>
+                        </marker>
+                    </defs>
+
+                    <!-- 左侧数据：略增高盒子，字不贴边 -->
+                    <rect class="np" x="14" y="28" width="130" height="42"/>
+                    <text class="title" x="79" y="48" text-anchor="middle">礼物文本数据库</text>
+                    <rect class="np" x="14" y="100" width="130" height="42"/>
+                    <text class="title" x="79" y="120" text-anchor="middle">礼物图像数据集</text>
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M79,100 L79,70"/>
+                    <!-- 引用原图：先竖再横再竖，避免斜线横穿左侧模块 -->
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M144,121 L144,288 H745 L745,158"/>
+                    <text class="lbl" x="440" y="282" text-anchor="middle">引用原图</text>
+
+                    <!-- 利用模型训练：双行标签在连线上方，避免与箭头重叠 -->
+                    <text class="lbl" x="168" y="26" text-anchor="middle">利用模型</text>
+                    <text class="lbl" x="168" y="35" text-anchor="middle">训练</text>
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M144,49 L188,49"/>
+                    <rect class="np" x="188" y="18" width="136" height="108"/>
+                    <text class="title" x="256" y="40" text-anchor="middle">物体分类</text>
+                    <text class="bullet" x="198" y="58">· 主体</text>
+                    <text class="bullet" x="198" y="72">· 物品</text>
+                    <text class="bullet" x="198" y="86">· 场景</text>
+
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M324,72 L354,72"/>
+                    <text class="lbl" x="339" y="66" text-anchor="middle">礼物组合</text>
+                    <rect class="np" x="354" y="18" width="136" height="108"/>
+                    <text class="title" x="422" y="40" text-anchor="middle">礼物组合阶级</text>
+                    <text class="bullet" x="364" y="58">· 高阶</text>
+                    <text class="bullet" x="364" y="72">· 中阶</text>
+                    <text class="bullet" x="364" y="86">· 低阶</text>
+
+                    <!-- 文生图提示词 LLM -->
+                    <rect class="np" x="512" y="0" width="132" height="28"/>
+                    <text class="lbl-sm" x="578" y="12" text-anchor="middle">Prompt</text>
+                    <text class="lbl-sm" x="578" y="21" text-anchor="middle">Engineering</text>
+                    <path class="edge-dashed" marker-end="url(#gp-arrow)" d="M578,28 L578,38"/>
+                    <rect class="dash-group" x="508" y="38" width="148" height="212"/>
+                    <text class="title" x="582" y="54" text-anchor="middle">文生图提示词</text>
+                    <text class="t2" x="582" y="66" text-anchor="middle">LLM</text>
+                    <rect class="np" x="526" y="74" width="112" height="28"/>
+                    <text class="lbl-sm" x="582" y="91" text-anchor="middle">高阶PE</text>
+                    <rect class="np" x="526" y="108" width="112" height="28"/>
+                    <text class="lbl-sm" x="582" y="125" text-anchor="middle">中阶PE</text>
+                    <rect class="np" x="526" y="142" width="112" height="28"/>
+                    <text class="lbl-sm" x="582" y="159" text-anchor="middle">低阶PE</text>
+
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M490,72 L508,72"/>
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M656,120 L700,120"/>
+                    <text class="lbl" x="678" y="114" text-anchor="middle">Prompt</text>
+
+                    <polygon class="nd" points="745,78 785,120 745,162 705,120"/>
+                    <text class="lbl" x="745" y="116" text-anchor="middle">结合判断</text>
+                    <text class="lbl-sm" x="745" y="128" text-anchor="middle">（服务核心模型）</text>
+
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M748,78 L812,52"/>
+                    <text class="lbl" x="786" y="46" text-anchor="middle">图像结合</text>
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M748,162 L812,188"/>
+                    <text class="lbl" x="786" y="202" text-anchor="middle">主体/角色微调</text>
+
+                    <rect class="nm" x="812" y="32" width="136" height="42"/>
+                    <text class="title" x="880" y="56" text-anchor="middle">GPT-4o融合</text>
+                    <rect class="nm" x="812" y="170" width="136" height="46"/>
+                    <text class="title" x="880" y="192" text-anchor="middle">核心角色微调</text>
+                    <text class="lbl-sm" x="880" y="206" text-anchor="middle">（Flux-LoRA）</text>
+
+                    <!-- 两路斜线直入 Refiner，减少直角折线 -->
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M948,53 L982,120"/>
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M948,193 L982,120"/>
+                    <rect class="np" x="982" y="96" width="124" height="48"/>
+                    <text class="title" x="1044" y="118" text-anchor="middle">Refiner</text>
+                    <text class="lbl-sm" x="1044" y="132" text-anchor="middle">图像优化</text>
+
+                    <text class="lbl" x="1124" y="104" text-anchor="middle">礼物融合</text>
+                    <text class="lbl" x="1124" y="113" text-anchor="middle">详情描述</text>
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M1106,120 L1142,120"/>
+
+                    <rect class="np" x="1156" y="0" width="132" height="28"/>
+                    <text class="lbl-sm" x="1222" y="12" text-anchor="middle">Prompt</text>
+                    <text class="lbl-sm" x="1222" y="21" text-anchor="middle">Engineering</text>
+                    <path class="edge-dashed" marker-end="url(#gp-arrow)" d="M1222,28 L1222,38"/>
+                    <rect class="dash-group" x="1142" y="38" width="148" height="212"/>
+                    <text class="title" x="1216" y="54" text-anchor="middle">分镜描述生成</text>
+                    <text class="t2" x="1216" y="66" text-anchor="middle">LLM</text>
+                    <rect class="np" x="1160" y="74" width="112" height="28"/>
+                    <text class="lbl-sm" x="1216" y="91" text-anchor="middle">高阶分镜</text>
+                    <rect class="np" x="1160" y="108" width="112" height="28"/>
+                    <text class="lbl-sm" x="1216" y="125" text-anchor="middle">中阶分镜</text>
+                    <rect class="np" x="1160" y="142" width="112" height="28"/>
+                    <text class="lbl-sm" x="1216" y="159" text-anchor="middle">低阶分镜</text>
+
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M1290,120 L1320,120"/>
+                    <rect class="nm" x="1320" y="88" width="196" height="58"/>
+                    <text class="title" x="1418" y="108" text-anchor="middle">分镜生成</text>
+                    <text class="lbl-sm" x="1418" y="122" text-anchor="middle">（GPT-4o，Flux渲染</text>
+                    <text class="lbl-sm" x="1418" y="134" text-anchor="middle">核心回归模型）</text>
+
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M1516,110 L1552,110"/>
+                    <rect class="np" x="1552" y="92" width="120" height="44"/>
+                    <text class="title" x="1612" y="112" text-anchor="middle">Refiner</text>
+                    <text class="lbl-sm" x="1612" y="126" text-anchor="middle">图像优化</text>
+
+                    <!-- Prompt：分镜生成底边 → 视频模型底边，单折线仅一处拐角 -->
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M1418,146 L1418,268 H1778 L1778,142"/>
+                    <text class="lbl" x="1598" y="262" text-anchor="middle">Prompt</text>
+
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M1672,114 L1700,114"/>
+                    <text class="lbl" x="1686" y="108" text-anchor="middle">分镜图</text>
+
+                    <rect class="np" x="1732" y="0" width="96" height="28"/>
+                    <text class="lbl-sm" x="1780" y="19" text-anchor="middle">精调LoRA</text>
+                    <path class="edge-dashed" marker-end="url(#gp-arrow)" d="M1780,28 L1780,90"/>
+
+                    <rect class="nm" x="1700" y="90" width="156" height="52"/>
+                    <text class="title" x="1778" y="112" text-anchor="middle">视频模型</text>
+                    <text class="lbl-sm" x="1778" y="128" text-anchor="middle">（可灵，Wan等）</text>
+
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M1856,116 L1904,116"/>
+                    <rect class="np" x="1904" y="98" width="156" height="44"/>
+                    <text class="title" x="1982" y="114" text-anchor="middle">视频优化+特效</text>
+                    <text class="title" x="1982" y="126" text-anchor="middle">合成</text>
+                    <path class="edge" marker-end="url(#gp-arrow)" d="M2060,120 L2108,120"/>
+                    <rect class="np" x="2108" y="102" width="128" height="44"/>
+                    <text class="title" x="2172" y="126" text-anchor="middle">最终礼物视频</text>
+                </svg>
+            </div>
+            <div class="mt-12 pt-8 border-t-2 border-dashed border-black max-w-5xl mx-auto px-1">
+                <p class="text-sm md:text-[15px] font-medium text-gray-900 leading-relaxed mb-6 max-w-3xl" data-i18n="gifts_bxtt_intro"></p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-6 items-start">
+                    <div class="gift-video-col flex flex-col gap-2 min-w-0">
+                        <p class="text-[11px] md:text-xs font-medium text-gray-800 border-l-2 border-black pl-3" data-i18n="gifts_bxtt_cap_1"></p>
+                        <figure class="gift-video-figure border-2 border-black bg-gray-200 shadow-[6px_6px_0_0_#000]">
+                            <video class="z-[1] opacity-0 transition-opacity duration-300" data-dv-video data-gift-intrinsic muted loop playsinline controls preload="metadata">
+                                <source src="videos/bxtt1.mp4" type="video/mp4">
+                            </video>
+                            <div class="absolute inset-0 z-0 flex items-center justify-center p-4 text-center bg-gray-200" data-dv-fallback>
+                                <span class="text-[10px] font-mono font-bold uppercase text-gray-500 leading-relaxed whitespace-pre-line" data-i18n="gifts_bxtt_ph_1"></span>
+                            </div>
+                        </figure>
+                    </div>
+                    <div class="gift-video-col flex flex-col gap-2 min-w-0">
+                        <p class="text-[11px] md:text-xs font-medium text-gray-800 border-l-2 border-black pl-3" data-i18n="gifts_bxtt_cap_2"></p>
+                        <figure class="gift-video-figure border-2 border-black bg-gray-200 shadow-[6px_6px_0_0_#000]">
+                            <video class="z-[1] opacity-0 transition-opacity duration-300" data-dv-video data-gift-intrinsic muted loop playsinline controls preload="metadata">
+                                <source src="videos/bxtt2.mp4" type="video/mp4">
+                            </video>
+                            <div class="absolute inset-0 z-0 flex items-center justify-center p-4 text-center bg-gray-200" data-dv-fallback>
+                                <span class="text-[10px] font-mono font-bold uppercase text-gray-500 leading-relaxed whitespace-pre-line" data-i18n="gifts_bxtt_ph_2"></span>
+                            </div>
+                        </figure>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 子项目二：AI 分身 · 竖屏动画 WebP 示意（images/douyinv/AnimateDiff_*.webp） -->
+    <section id="avatar" class="px-4 md:px-8 py-10 md:py-14 border-b-2 border-black bg-[#f4f4f4] max-w-6xl mx-auto w-full scroll-mt-24">
+        <h2 class="font-black text-3xl md:text-5xl uppercase tracking-tighter mb-2 max-w-5xl mx-auto" data-i18n="avatar_h2">AI Avatar</h2>
+        <div class="max-w-5xl mx-auto mb-10 text-left">
+            <h3 class="case-h2 !normal-case !text-2xl md:!text-3xl !mb-1" data-i18n="avatar_brief_h3">AI Avatar · emoticons &amp; production</h3>
+            <div class="space-y-5 md:space-y-6">
+                <div>
+                    <h4 class="font-black text-base md:text-lg uppercase tracking-tight mb-0.5" data-i18n="avatar_brief_ctx_h">Project context</h4>
+                    <div class="text-sm md:text-[15px] font-medium text-gray-800 leading-relaxed space-y-3 max-w-3xl" data-i18n="avatar_brief_ctx_body"></div>
+                </div>
+                <div class="border-t border-black pt-5 md:pt-6">
+                    <h4 class="font-black text-base md:text-lg uppercase tracking-tight mb-0.5" data-i18n="avatar_brief_cols_h">Highlights</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-4 lg:gap-6 items-start">
+                        <div class="border-l-2 border-gray-300 pl-4 min-w-0">
+                            <h5 class="font-black text-sm uppercase mb-2 tracking-tight" data-i18n="avatar_brief_col1_h">Pipelines &amp; efficiency</h5>
+                            <ul class="list-none space-y-1.5 text-xs md:text-sm font-medium text-gray-800 leading-relaxed" data-i18n="avatar_brief_col1_list"></ul>
+                        </div>
+                        <div class="border-l-2 border-gray-300 pl-4 min-w-0">
+                            <h5 class="font-black text-sm uppercase mb-2 tracking-tight" data-i18n="avatar_brief_col2_h">TTS &amp; digital IP</h5>
+                            <ul class="list-none space-y-1.5 text-xs md:text-sm font-medium text-gray-800 leading-relaxed" data-i18n="avatar_brief_col2_list"></ul>
+                        </div>
+                        <div class="border-l-2 border-gray-300 pl-4 min-w-0">
+                            <h5 class="font-black text-sm uppercase mb-2 tracking-tight" data-i18n="avatar_brief_col3_h">Campaign impact</h5>
+                            <ul class="list-none space-y-1.5 text-xs md:text-sm font-medium text-gray-800 leading-relaxed" data-i18n="avatar_brief_col3_list"></ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-t border-black pt-5 md:pt-6">
+                    <h4 class="font-black text-base md:text-lg uppercase tracking-tight mb-0.5" data-i18n="avatar_brief_role_h">My role</h4>
+                    <ul class="space-y-2 font-medium text-sm text-gray-900 max-w-3xl" data-i18n="avatar_brief_role_list"></ul>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-6xl mx-auto">
+            <div class="overflow-x-auto pb-3 -mx-4 px-4 md:mx-0 md:px-0 [scrollbar-gutter:stable]" style="-webkit-overflow-scrolling: touch;">
+                <div class="flex flex-nowrap gap-4 md:gap-5 w-max mx-auto items-start" role="list" aria-label="AI avatar UI demos">
+                    <figure class="avatar-anim-frame" role="listitem">
+                        <img src="images/douyinv/AnimateDiff_00001%20(1).webp" alt="" width="720" height="1560" loading="eager" decoding="async" fetchpriority="high" onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('hidden');">
+                        <div class="hidden absolute inset-0 z-10 flex items-center justify-center p-2 text-center bg-gray-200">
+                            <span class="text-[9px] font-mono font-bold uppercase text-gray-500 leading-tight whitespace-pre-line text-balance" data-i18n="avatar_ph_1"></span>
+                        </div>
+                    </figure>
+                    <figure class="avatar-anim-frame" role="listitem">
+                        <img src="images/douyinv/AnimateDiff_00002%20(1).webp" alt="" width="720" height="1560" loading="eager" decoding="async" onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('hidden');">
+                        <div class="hidden absolute inset-0 z-10 flex items-center justify-center p-2 text-center bg-gray-200">
+                            <span class="text-[9px] font-mono font-bold uppercase text-gray-500 leading-tight whitespace-pre-line text-balance" data-i18n="avatar_ph_2"></span>
+                        </div>
+                    </figure>
+                    <figure class="avatar-anim-frame" role="listitem">
+                        <img src="images/douyinv/AnimateDiff_00003%20(1).webp" alt="" width="720" height="1560" loading="eager" decoding="async" onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('hidden');">
+                        <div class="hidden absolute inset-0 z-10 flex items-center justify-center p-2 text-center bg-gray-200">
+                            <span class="text-[9px] font-mono font-bold uppercase text-gray-500 leading-tight whitespace-pre-line text-balance" data-i18n="avatar_ph_3"></span>
+                        </div>
+                    </figure>
+                    <figure class="avatar-anim-frame" role="listitem">
+                        <img src="images/douyinv/AnimateDiff_00004%20(1).webp" alt="" width="720" height="1560" loading="eager" decoding="async" onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('hidden');">
+                        <div class="hidden absolute inset-0 z-10 flex items-center justify-center p-2 text-center bg-gray-200">
+                            <span class="text-[9px] font-mono font-bold uppercase text-gray-500 leading-tight whitespace-pre-line text-balance" data-i18n="avatar_ph_4"></span>
+                        </div>
+                    </figure>
+                    <figure class="avatar-anim-frame" role="listitem">
+                        <img src="images/douyinv/AnimateDiff_00005%20(1).webp" alt="" width="720" height="1560" loading="eager" decoding="async" onerror="this.style.display='none'; this.nextElementSibling?.classList.remove('hidden');">
+                        <div class="hidden absolute inset-0 z-10 flex items-center justify-center p-2 text-center bg-gray-200">
+                            <span class="text-[9px] font-mono font-bold uppercase text-gray-500 leading-tight whitespace-pre-line text-balance" data-i18n="avatar_ph_5"></span>
+                        </div>
+                    </figure>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-12 md:mt-14 pt-8 md:pt-10 border-t-2 border-dashed border-black max-w-[100vw] mx-auto px-1">
+            <h3 class="font-black text-xl md:text-2xl uppercase tracking-tighter mb-1 max-w-5xl mx-auto px-1" data-i18n="avatar_pipeline_h3">Avatar generation pipeline</h3>
+            <p class="font-mono text-[10px] text-gray-500 uppercase tracking-widest mb-4 max-w-5xl mx-auto px-1" data-i18n="avatar_pipeline_sub">ComfyUI topology · left → right</p>
+            <div class="overflow-x-auto pb-6 -mx-4 px-4 md:mx-0 md:px-0">
+                <svg class="avatar-pipeline-svg w-[1240px] max-w-none h-auto mx-auto" viewBox="0 0 1240 268" role="img" aria-labelledby="avatar-pipeline-title">
+                    <title id="avatar-pipeline-title">AI 分身形象生成 ComfyUI 链路</title>
+                    <defs>
+                        <marker id="avp-arw" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                            <path d="M0,0 L7,3.5 L0,7 z" fill="#000"/>
+                        </marker>
+                    </defs>
+                    <!-- 主干：输入 → 双路 → Flux → 后处理链 → 输出 -->
+                    <path class="edge" marker-end="url(#avp-arw)" d="M128,134 L152,134"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M152,134 L152,64 L166,64"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M152,134 L152,204 L166,204"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M284,64 L302,64"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M284,204 L318,204"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M426,64 L448,64 L448,134 L472,134"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M454,204 L448,204 L448,134 L472,134"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M538,134 L558,134"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M646,134 L664,134"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M756,134 L772,134"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M872,134 L888,134"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M984,134 L1000,134"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M1086,134 L1102,134"/>
+                    <path class="edge" marker-end="url(#avp-arw)" d="M1188,134 L1204,134"/>
+                    <!-- 辅助：虚线 -->
+                    <path class="edge-dashed" d="M498,46 L505,108"/>
+                    <path class="edge-dashed" d="M958,46 L958,98"/>
+                    <rect class="np" x="20" y="102" width="108" height="64" rx="2"/>
+                    <text class="t" x="74" y="128" text-anchor="middle">输入ID</text>
+                    <text class="ts" x="74" y="144" text-anchor="middle">（主播照片）</text>
+                    <rect class="np" x="166" y="36" width="118" height="56" rx="2"/>
+                    <text class="t" x="225" y="58" text-anchor="middle">VQA模型反推</text>
+                    <text class="tx" x="225" y="72" text-anchor="middle">Joycaption / Florence</text>
+                    <rect class="np" x="302" y="36" width="124" height="56" rx="2"/>
+                    <text class="t" x="364" y="58" text-anchor="middle">精准提示词反推</text>
+                    <text class="tx" x="364" y="72" text-anchor="middle">Llama3 / GPT-4o</text>
+                    <rect class="np" x="166" y="176" width="118" height="56" rx="2"/>
+                    <text class="t" x="225" y="198" text-anchor="middle">图片自动预处理</text>
+                    <rect class="np" x="318" y="176" width="136" height="56" rx="2"/>
+                    <text class="t" x="386" y="198" text-anchor="middle">PULID保持注入</text>
+                    <text class="tx" x="386" y="212" text-anchor="middle">Flux/SXL 特征一致</text>
+                    <polygon class="nm" points="505,108 538,134 505,160 472,134"/>
+                    <text class="t" x="505" y="132" text-anchor="middle">Flux采样</text>
+                    <text class="tx" x="505" y="178" text-anchor="middle">Shuttle 3D · PULID · ControlNet</text>
+                    <rect class="dash-node" x="450" y="10" width="96" height="36" rx="2"/>
+                    <text class="ts" x="498" y="24" text-anchor="middle">open pose</text>
+                    <text class="ts" x="498" y="36" text-anchor="middle">姿态注入</text>
+                    <rect class="np" x="558" y="98" width="88" height="72" rx="2"/>
+                    <text class="t" x="602" y="124" text-anchor="middle">自动后处理</text>
+                    <rect class="np" x="664" y="98" width="92" height="72" rx="2"/>
+                    <text class="t" x="710" y="124" text-anchor="middle">表情增强</text>
+                    <text class="tx" x="710" y="140" text-anchor="middle">LivePortrait</text>
+                    <rect class="np" x="772" y="98" width="100" height="72" rx="2"/>
+                    <text class="t" x="822" y="124" text-anchor="middle">自动手部抠像</text>
+                    <text class="tx" x="822" y="140" text-anchor="middle">SAM2</text>
+                    <rect class="np" x="888" y="98" width="96" height="72" rx="2"/>
+                    <text class="t" x="936" y="124" text-anchor="middle">图层合成</text>
+                    <rect class="dash-node" x="910" y="10" width="96" height="36" rx="2"/>
+                    <text class="ts" x="958" y="24" text-anchor="middle">前 / 中 / 后</text>
+                    <text class="ts" x="958" y="36" text-anchor="middle">图片输入</text>
+                    <rect class="np" x="1000" y="98" width="86" height="72" rx="2"/>
+                    <text class="t" x="1043" y="124" text-anchor="middle">2×Refiner</text>
+                    <text class="tx" x="1043" y="140" text-anchor="middle">SD1.5 / SDXL Hyper</text>
+                    <rect class="np" x="1102" y="98" width="86" height="72" rx="2"/>
+                    <text class="t" x="1145" y="132" text-anchor="middle">输出图</text>
+                </svg>
+            </div>
+            <p class="text-[11px] md:text-xs text-gray-600 max-w-5xl mx-auto px-1 mt-3 leading-relaxed font-medium" data-i18n="avatar_pipeline_legend"></p>
+        </div>
+    </section>
+
+    <footer class="py-8 px-4 md:px-8 border-t-2 border-black flex flex-wrap justify-between gap-4 text-[10px] font-bold uppercase tracking-widest bg-black text-white">
+        <span>© 2026 LIJIAYANG</span>
+        <a href="index.html" class="hover:underline" data-i18n="nav_home">Home</a>
+    </footer>
+
+    <script>
+        const chipsEn = [
+            'Douyin V', 'Creator Economy', 'AI Live Gifts', 'AI Avatar', 'Commercial validation',
+            'Multi-dimensional evaluation', 'AIGC', 'Creator monetization', 'ComfyUI', 'Production efficiency'
+        ];
+        const chipsZh = [
+            '抖音V项目', '创作者生态', 'AI 直播礼物', 'AI 分身', '商业化验证',
+            '多维评估', 'AIGC', '创作者变现', 'ComfyUI', '产线效率'
+        ];
+
+        const translations = {
+            en: {
+                nav_back: 'Back', nav_home: 'Home',
+                hero_tag: 'Program',
+                hero_title: 'Douyin V Project',
+                hero_sub: 'Validated the commercial viability of AI avatars and AI live gifts in the Douyin creator ecosystem, and built multi-dimensional evaluation methods oriented toward business delivery.',
+                kw_title: 'Signal vocabulary',
+                gifts_h2: 'AI Live Gifts',
+                gifts_brief_h3: 'AIGC gift refinement / fusion',
+                gifts_brief_ctx_h: 'Project context',
+                gifts_brief_ctx_body: `<p>This track sits in the <strong>Douyin V / creator monetization</strong> program: using <strong>AIGC</strong> to ship <strong>gift refinement (fusion)</strong>—two base gifts combine into one new gift for live rooms as vertical media, with pipelines for prompts, image/video models, and review (see SVG below).</p>
+                    <p><strong>Gift refinement</strong> means <strong>two independent gifts</strong> are fused into <strong>one new gift</strong>, readable and shareable in the gifting moment.</p>`,
+                gifts_brief_cols_h: 'Scope definition',
+                gifts_brief_col1_h: 'Layer 1 — Fusion logic',
+                gifts_brief_col1_list: `<li><span class="text-black font-bold">·</span> Keep <strong>recognizable cues from both sources</strong> so viewers sense “what met what.”</li>
+                    <li><span class="text-black font-bold">·</span> Example: sports car + rabbit → <strong>rabbit driving the sports car</strong>.</li>`,
+                gifts_brief_col2_h: 'Layer 2 — Quality read',
+                gifts_brief_col2_body: `<p>Outcomes can land as <strong>fail / normal / premium</strong>; exact rules were <strong>to align with PM</strong>. Directionally:</p>
+                    <ul class="list-none space-y-1.5 border-l-2 border-gray-400 pl-3 mt-2">
+                        <li><span class="text-black font-bold">·</span> <span class="font-black">Fail</span> — smoke, damage, playful “bad luck.”</li>
+                        <li><span class="text-black font-bold">·</span> <span class="font-black">Normal</span> — base motion + stylized look.</li>
+                        <li><span class="text-black font-bold">·</span> <span class="font-black">Premium</span> — heavier VFX + dynamic scene.</li>
+                    </ul>`,
+                gifts_brief_col3_h: 'Layer 3 — Goals & two-shot',
+                gifts_brief_col3_list: `<li><span class="text-black font-bold">·</span> Deliver <strong>surprise</strong> and <strong>personalized gifting</strong>; use <strong>refinement cost</strong> and <strong>tiers</strong> for paid refinement and repeat sends.</li>
+                    <li><span class="text-black font-bold">·</span> <strong>Shot 1 (~0.5–1s):</strong> two sources as <strong>raw materials</strong> (provenance, price band).</li>
+                    <li><span class="text-black font-bold">·</span> <strong>Shot 2:</strong> reveal the <strong>fused result</strong>.</li>`,
+                gifts_brief_role_h: 'My role',
+                gifts_brief_role_list: `<li class="flex gap-3 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs pt-0.5">01</span><span>Framed <strong>fusion inputs (gifts + emotion/prompt)</strong>, <strong>vertical asset specs</strong>, and <strong>quality rubrics</strong> for reviews.</span></li>
+                    <li class="flex gap-3 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs pt-0.5">02</span><span>With engineering / model partners, aligned <strong>generation → refiner → storyboard → video</strong> handoffs (pipeline below).</span></li>
+                    <li class="flex gap-3"><span class="font-mono text-gray-400 shrink-0 text-xs pt-0.5">03</span><span>Shipped demo assets that match the <strong>two-shot</strong> story for anchors and viewers.</span></li>`,
+                gifts_pipeline_h3: 'Gift generation pipeline',
+                gifts_pipeline_sub: 'End-to-end linkage (scroll horizontally on small screens)',
+                gifts_bxtt_intro: 'More on the <strong>Bi Xin Tu Tu</strong> AI gift line: <strong>Bi Xin Tu Tu’s Colorful Life</strong> and the <strong>White Valentine’s Day</strong> special.',
+                gifts_bxtt_cap_1: '<span class="font-black text-black">Colorful life</span>',
+                gifts_bxtt_cap_2: '<span class="font-black text-black">White Valentine’s Day</span>',
+                gifts_bxtt_ph_1: 'Add MP4:\nvideos/bxtt1.mp4',
+                gifts_bxtt_ph_2: 'Add MP4:\nvideos/bxtt2.mp4',
+                gifts_case_1: `<p><span class="font-black text-black">User selection</span> — Bunny × Sports car</p>
+                    <p><span class="font-black text-black">Inputs</span> — Gift A: Bunny; Gift B: Sports car; Emotion: direct confession</p>
+                    <p><span class="font-black text-black">Output</span> — The video below</p>`,
+                gifts_case_2: `<p><span class="font-black text-black">User selection</span> — Bunny × Sports car</p>
+                    <p><span class="font-black text-black">Inputs</span> — Gift A: Bunny; Gift B: Sports car; Emotion: sports-car party celebration</p>
+                    <p><span class="font-black text-black">Output</span> — The video below</p>`,
+                gifts_case_3: `<p><span class="font-black text-black">User selection</span> — Sports car × Airplane</p>
+                    <p><span class="font-black text-black">Inputs</span> — Gift A: Sports car; Gift B: Airplane; Emotion: flashy, showy</p>
+                    <p><span class="font-black text-black">Output</span> — The video below</p>`,
+                gifts_case_4: `<p><span class="font-black text-black">User selection</span> — Sports car × Hot air balloon</p>
+                    <p><span class="font-black text-black">Inputs</span> — Gift A: Hot air balloon; Gift B: Sports car; Emotion: direct confession</p>
+                    <p><span class="font-black text-black">Output</span> — The video below</p>`,
+                gifts_ph_1: 'Add MP4:\nvideos/ailiwu1.mp4',
+                gifts_ph_2: 'Add MP4:\nvideos/ailiwu2.mp4',
+                gifts_ph_3: 'Add MP4:\nvideos/ailiwu3.mp4',
+                gifts_ph_4: 'Add MP4:\nvideos/ailiwu4.mp4',
+                avatar_h2: 'AI Avatar',
+                avatar_brief_h3: 'AI Avatar · emoticons &amp; digital human',
+                avatar_brief_ctx_h: 'Project context',
+                avatar_brief_ctx_body: `<p>In digital interaction, <strong>stickers and rich media</strong> are key to playful, expressive engagement. AI helps creators ship <strong>on-brand emoticons</strong> and reuse them across chat and live contexts.</p>
+                    <p>Classic AI sticker pipelines leaned on <strong>MidJourney datasets + LoRA training</strong>—slow, labor-intensive, and weak on <strong>character consistency</strong>. We rebuilt production around <strong>ComfyUI workflows</strong> to replace that LoRA-centric path for <strong>AI avatar stickers</strong>.</p>`,
+                avatar_brief_cols_h: 'Highlights',
+                avatar_brief_col1_h: 'Layer 1 — Pipelines &amp; throughput',
+                avatar_brief_col1_list: `<li><span class="text-black font-bold">·</span> Explored <strong>10+</strong> open-source video/sticker pipelines, captured <strong>35</strong> experiment notes, co-built and down-selected <strong>3</strong> stable production chains for sticker output—closing the loop on <strong>dynamic emoticon design</strong> and cutting third-party reliance.</li>
+                    <li><span class="text-black font-bold">·</span> Built a <strong>0→1 fully automated static emoticon</strong> production pipeline: <strong>~99.40%</strong> production-efficiency gain (<strong>~1 week → ~1 hour</strong>).</li>`,
+                avatar_brief_col2_h: 'Layer 2 — TTS &amp; scenarios',
+                avatar_brief_col2_list: `<li><span class="text-black font-bold">·</span> Extended from AI stickers to <strong>TTS-driven dynamic IP digital humans</strong>, broadening AI avatar scenarios and emotional connection.</li>`,
+                avatar_brief_col3_h: 'Layer 3 — Campaign readout',
+                avatar_brief_col3_list: `<li><span class="text-black font-bold">·</span> Spring Festival sticker launch: <strong>70+</strong> authors live, ~<strong>34%</strong> of avatar user base covered; <strong>format entries per user +6%</strong> (sig); <strong>active chat days +6.5%</strong> (sig).</li>`,
+                avatar_brief_role_h: 'My role',
+                avatar_brief_role_list: `<li class="flex gap-3 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs pt-0.5">01</span><span><strong>POC</strong> across <strong>sticker consistency &amp; diversity</strong> through <strong>TTS-driven digital-human motion consistency</strong>; documented methods, defined <strong>virtual IP system standards and SOPs</strong>, and shipped <strong>modular playbooks</strong> for new IPs and AI-led design.</span></li>
+                    <li class="flex gap-3"><span class="font-mono text-gray-400 shrink-0 text-xs pt-0.5">02</span><span>Expanded from <strong>generation consistency</strong> to <strong>voice–motion consistency</strong> for avatar digital humans—stress-testing <strong>open-source stacks</strong> and consolidating durable <strong>production learnings</strong>.</span></li>`,
+                avatar_ph_1: 'Add WebP:\nAnimateDiff_00001 (1).webp',
+                avatar_ph_2: 'Add WebP:\nAnimateDiff_00002 (1).webp',
+                avatar_ph_3: 'Add WebP:\nAnimateDiff_00003 (1).webp',
+                avatar_ph_4: 'Add WebP:\nAnimateDiff_00004 (1).webp',
+                avatar_ph_5: 'Add WebP:\nAnimateDiff_00005 (1).webp',
+                avatar_pipeline_h3: 'Avatar image generation pipeline',
+                avatar_pipeline_sub: 'ComfyUI topology · main vs auxiliary inputs (scroll horizontally on small screens)',
+                avatar_pipeline_legend: '<strong>Solid lines</strong> — main data flow, left to right. <strong>Dashed lines</strong> — <strong>Open Pose</strong> posture injection into Flux sampling, and <strong>front / mid / back</strong> image inputs for layer composition.'
+            },
+            zh: {
+                nav_back: '返回', nav_home: '首页',
+                hero_tag: '总项目',
+                hero_title: '抖音V项目',
+                hero_sub: '验证 AI 分身与 AI 礼物在抖音创作者生态中的商业化可行性，并建立面向业务落地的多维评估方法。',
+                kw_title: '关键词',
+                gifts_h2: 'AI 直播礼物',
+                gifts_brief_h3: 'AIGC 礼物炼化 / 礼物融合',
+                gifts_brief_ctx_h: '项目背景',
+                gifts_brief_ctx_body: `<p>该方向落在 <strong>抖音 V / 创作者变现</strong> 语境下：用 <strong>AIGC</strong> 落地 <strong>礼物炼化（融合）</strong>——用户将 <strong>两份基础礼物</strong> 合成为 <strong>一件新礼物</strong>，在直播间以竖屏素材呈现；需串联 Prompt、图像/视频模型与评审闭环（见下方链路图）。</p>
+                    <p><strong>礼物炼化</strong> 指将 <strong>两个独立礼物</strong> 融合为 <strong>新礼物</strong> 的互动玩法，强调合成结果在送礼场景里<strong>可感知、可传播</strong>。</p>`,
+                gifts_brief_cols_h: '定义范围',
+                gifts_brief_col1_h: '层 1 — 融合逻辑',
+                gifts_brief_col1_list: `<li><span class="text-black font-bold">·</span> 融合后须 <strong>保留双方可识别的元素</strong>，让观众理解「谁和谁碰在一起」。</li>
+                    <li><span class="text-black font-bold">·</span> 例如 <strong>跑车 + 兔子 = 兔子开跑车</strong>。</li>`,
+                gifts_brief_col2_h: '层 2 — 品质与观感',
+                gifts_brief_col2_body: `<p>结果可分为 <strong>失败 / 普通 / 高级</strong> 等档位，细则 <strong>待与产品共同敲定</strong>；观感上要<strong>一眼读出差异</strong>：</p>
+                    <ul class="list-none space-y-1.5 border-l-2 border-gray-400 pl-3 mt-2">
+                        <li><span class="text-black font-bold">·</span> <span class="font-black">失败</span>：破损、冒烟、零件掉落等「翻车感」趣味表达。</li>
+                        <li><span class="text-black font-bold">·</span> <span class="font-black">普通</span>：基础动效 + 风格化场景。</li>
+                        <li><span class="text-black font-bold">·</span> <span class="font-black">高级</span>：高特效 + 动态大场面。</li>
+                    </ul>`,
+                gifts_brief_col3_h: '层 3 — 目标与双镜',
+                gifts_brief_col3_list: `<li><span class="text-black font-bold">·</span> 用 AI 融合提供 <strong>惊喜与新奇</strong>，满足 <strong>个性化送礼</strong>；以 <strong>炼化费用、品质档位</strong> 支撑 <strong>付费炼化</strong> 与 <strong>重复送出炼化礼物</strong>。</li>
+                    <li><span class="text-black font-bold">·</span> <strong>第一镜</strong>（约 <strong>0.5–1s</strong>）：两礼物的「原材料」，交代 <strong>来源与价格带</strong>。</li>
+                    <li><span class="text-black font-bold">·</span> <strong>第二镜</strong>：呈现 <strong>炼化 / 融合结果</strong>。</li>`,
+                gifts_brief_role_h: '我的角色',
+                gifts_brief_role_list: `<li class="flex gap-3 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs pt-0.5">01</span><span>拆解 <strong>融合输入（礼物 + 情感/文案）</strong> 与 <strong>竖屏资产规格</strong>，定义 <strong>失败 / 普通 / 高级</strong> 等评审口径。</span></li>
+                    <li class="flex gap-3 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs pt-0.5">02</span><span>协同产研与模型侧对齐 <strong>生成 → Refiner → 分镜 → 视频</strong> 交接（见下方 SVG）。</span></li>
+                    <li class="flex gap-3"><span class="font-mono text-gray-400 shrink-0 text-xs pt-0.5">03</span><span>推动竖屏 demo 与页面叙事同时服务 <strong>评审讲清链路</strong> 与 <strong>用户看懂双镜</strong>。</span></li>`,
+                gifts_pipeline_h3: '礼物生成链路',
+                gifts_pipeline_sub: '端到端拓扑（窄屏请横向滚动查看）',
+                gifts_bxtt_intro: '比心兔兔 AI 礼物的其他项目内容：<strong>比心兔兔的多彩人生</strong>，和<strong>白色情人节特辑</strong>。',
+                gifts_bxtt_cap_1: '<span class="font-black text-black">多彩人生</span>',
+                gifts_bxtt_cap_2: '<span class="font-black text-black">白色情人节特辑</span>',
+                gifts_bxtt_ph_1: '请放置 MP4：\nvideos/bxtt1.mp4',
+                gifts_bxtt_ph_2: '请放置 MP4：\nvideos/bxtt2.mp4',
+                gifts_case_1: `<p><span class="font-black text-black">用户选择</span>　兔兔 × 跑车</p>
+                    <p><span class="font-black text-black">实际输入内容</span>　礼物 A：兔兔；礼物 B：跑车；情感：直白告白</p>
+                    <p><span class="font-black text-black">生成</span>　即为下方对应视频</p>`,
+                gifts_case_2: `<p><span class="font-black text-black">用户选择</span>　兔兔 × 跑车</p>
+                    <p><span class="font-black text-black">实际输入内容</span>　礼物 A：兔兔；礼物 B：跑车；情感：庆祝跑车派对</p>
+                    <p><span class="font-black text-black">生成</span>　即为下方对应视频</p>`,
+                gifts_case_3: `<p><span class="font-black text-black">用户选择</span>　跑车 × 飞机</p>
+                    <p><span class="font-black text-black">实际输入内容</span>　礼物 A：跑车；礼物 B：飞机；情感：彰显华丽、炫耀</p>
+                    <p><span class="font-black text-black">生成</span>　即为下方对应视频</p>`,
+                gifts_case_4: `<p><span class="font-black text-black">用户选择</span>　跑车 × 热气球</p>
+                    <p><span class="font-black text-black">实际输入内容</span>　礼物 A：热气球；礼物 B：跑车；情感：直白告白</p>
+                    <p><span class="font-black text-black">生成</span>　即为下方对应视频</p>`,
+                gifts_ph_1: '请放置 MP4：\nvideos/ailiwu1.mp4',
+                gifts_ph_2: '请放置 MP4：\nvideos/ailiwu2.mp4',
+                gifts_ph_3: '请放置 MP4：\nvideos/ailiwu3.mp4',
+                gifts_ph_4: '请放置 MP4：\nvideos/ailiwu4.mp4',
+                avatar_h2: 'AI 分身',
+                avatar_brief_h3: 'AI 分身 · 表情包与数字人产线',
+                avatar_brief_ctx_h: '项目背景',
+                avatar_brief_ctx_body: `<p>在数字化互动中，<strong>表情包与多媒体素材</strong>是增强用户互动体验的重要工具。借助 AI，创作者能更高效地打造<strong>与自身形象一致</strong>的表情，并在多种交流场景中复用，提升趣味性与传播力。</p>
+                    <p>传统 AI 表情包多依赖 <strong>MidJourney 制作数据集 + LoRA 训练</strong>，耗时长、成本高，且<strong>人物形象一致性</strong>难以保障。为此计划以 <strong>ComfyUI workflow</strong> 重构 <strong>AI 分身表情包</strong>生产流程，替代以 LoRA 为主的传统路径。</p>`,
+                avatar_brief_cols_h: '关键结果',
+                avatar_brief_col1_h: '层 1 — 产线与人效',
+                avatar_brief_col1_list: `<li><span class="text-black font-bold">·</span> 探索与评估超过 <strong>10</strong> 种开源视频化方案，沉淀 <strong>35</strong> 篇实验文档，参与搭建并筛选 <strong>3</strong> 套稳定生产链路用于表情包生产，实现<strong>动态表情设计全链路</strong>能力闭环，减少第三方依赖。</li>
+                    <li><span class="text-black font-bold">·</span> 搭建从 <strong>0 到 1</strong> 的全自动静态表情生产流程，生产效率提升约 <strong>99.40%</strong>（由约 <strong>1 周</strong>缩短至约 <strong>1 小时</strong>）。</li>`,
+                avatar_brief_col2_h: '层 2 — TTS 与应用场景',
+                avatar_brief_col2_list: `<li><span class="text-black font-bold">·</span> 在 AI 表情基础上发散探索，通过 <strong>TTS 语音驱动动态 IP 数字人</strong>形象，拓展 AI 分身应用场景层次，强化用户情感连接与心智认知。</li>`,
+                avatar_brief_col3_h: '层 3 — 大促与数据',
+                avatar_brief_col3_list: `<li><span class="text-black font-bold">·</span> 春节表情包大事件：<strong>70+</strong> 作者生效，约覆盖 <strong>34%</strong> 分身用户规模；<strong>format 人均进入次数 +6%</strong> 显著，<strong>主动对话天数 +6.5%</strong> 显著。</li>`,
+                avatar_brief_role_h: '我的角色',
+                avatar_brief_role_list: `<li class="flex gap-3 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs pt-0.5">01</span><span>担任 <strong>POC</strong>：从表情包<strong>一致性与多样性</strong>到分身<strong>数字人语音与动作一致性</strong>攻坚；沉淀实践，建立<strong>虚拟 IP 系统设计标准与 SOP</strong>，输出<strong>标准化、模块化</strong>方案支撑新形象与其他 AI 设计项目。</span></li>
+                    <li class="flex gap-3"><span class="font-mono text-gray-400 shrink-0 text-xs pt-0.5">02</span><span>焦点由 <strong>AI 表情生成一致性</strong>延伸至 <strong>分身数字人语音与动作一致性</strong>；验证大量开源技术，形成可复用的项目经验沉淀。</span></li>`,
+                avatar_ph_1: '请放置 WebP：\nAnimateDiff_00001 (1).webp',
+                avatar_ph_2: '请放置 WebP：\nAnimateDiff_00002 (1).webp',
+                avatar_ph_3: '请放置 WebP：\nAnimateDiff_00003 (1).webp',
+                avatar_ph_4: '请放置 WebP：\nAnimateDiff_00004 (1).webp',
+                avatar_ph_5: '请放置 WebP：\nAnimateDiff_00005 (1).webp',
+                avatar_pipeline_h3: '分身形象生成链路',
+                avatar_pipeline_sub: 'ComfyUI 拓扑 · 主干与辅助输入（窄屏请横向滚动）',
+                avatar_pipeline_legend: '<strong>实线</strong>为主数据流，自左向右。<strong>虚线</strong>为辅助：<strong>Open Pose</strong> 注入姿态至 Flux 采样；<strong>前 / 中 / 后</strong> 图片输入参与图层合成。'
+            }
+        };
+
+        function renderChips(lang) {
+            const el = document.getElementById('kw-chips');
+            const list = lang === 'zh' ? chipsZh : chipsEn;
+            el.innerHTML = list.map(t =>
+                `<span class="inline-block border-2 border-black px-3 py-1.5 text-xs font-bold uppercase tracking-wide bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">${t}</span>`
+            ).join('');
+        }
+
+        function setLanguage(lang) {
+            document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'en';
+            document.body.classList.toggle('lang-zh', lang === 'zh');
+            const dict = translations[lang];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const k = el.getAttribute('data-i18n');
+                if (dict[k] != null) el.innerHTML = dict[k];
+            });
+            renderChips(lang);
+            const btn = document.getElementById('lang-toggle');
+            if (lang === 'en') {
+                btn.innerHTML = '[ EN / <span class="opacity-40">中</span> ]';
+            } else {
+                btn.innerHTML = '[ <span class="opacity-40">EN</span> / 中 ]';
+            }
+            document.title = lang === 'zh'
+                ? '抖音V项目 | AI 产品系统 — LIJIAYANG'
+                : 'Douyin V Project | AI Product Systems — LIJIAYANG';
+            requestAnimationFrame(() => relayoutAllGiftVideos());
+        }
+
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+            const zh = document.body.classList.contains('lang-zh');
+            setLanguage(zh ? 'en' : 'zh');
+        });
+
+        function layoutGiftIntrinsicVideo(v) {
+            if (!v.hasAttribute('data-gift-intrinsic')) return;
+            const fig = v.closest('.gift-video-figure');
+            const col = v.closest('.gift-video-col');
+            if (!fig || !col || !v.videoWidth || !v.videoHeight) return;
+            const maxH = Math.min(window.innerHeight * 0.72, 720);
+            const colW = col.getBoundingClientRect().width;
+            const vw = v.videoWidth;
+            const vh = v.videoHeight;
+            const scale = Math.min(1, maxH / vh, colW / vw);
+            const dispW = Math.max(1, Math.round(vw * scale));
+            const dispH = Math.max(1, Math.round(vh * scale));
+            fig.style.width = `${dispW}px`;
+            fig.style.height = `${dispH}px`;
+            fig.classList.add('gift-video-sized');
+        }
+
+        function relayoutAllGiftVideos() {
+            document.querySelectorAll('[data-dv-video][data-gift-intrinsic]').forEach((v) => {
+                if (v.readyState >= 1) layoutGiftIntrinsicVideo(v);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setLanguage('en');
+            document.querySelectorAll('[data-dv-video]').forEach((v) => {
+                const fig = v.closest('figure');
+                const fb = fig?.querySelector('[data-dv-fallback]');
+                const showVideo = () => {
+                    layoutGiftIntrinsicVideo(v);
+                    v.classList.add('opacity-100');
+                    if (fb) fb.classList.add('hidden');
+                };
+                v.addEventListener('loadedmetadata', showVideo);
+                v.addEventListener('loadeddata', showVideo);
+                v.addEventListener('canplay', showVideo);
+                v.addEventListener('error', () => {
+                    v.classList.add('hidden');
+                    if (fb) fb.classList.remove('hidden');
+                });
+            });
+            let giftResizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(giftResizeTimer);
+                giftResizeTimer = setTimeout(relayoutAllGiftVideos, 120);
+            });
+        });
+    </script>
+</body>
+</html>

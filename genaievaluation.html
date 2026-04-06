@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seed Prompt Engineering | GenAI Evaluation — LIJIAYANG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@400;600;700;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['"Fira Code"', '"Noto Sans SC"', 'monospace'],
+                        sans: ['"Inter"', '"Noto Sans SC"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html { scroll-behavior: smooth; }
+        .lang-zh .tracking-tighter { letter-spacing: 0.02em !important; }
+        .lang-zh .tracking-tight { letter-spacing: 0.02em !important; }
+        /* Before / After：1:1，悬停显 After */
+        .ba-pair { cursor: pointer; }
+        .ba-pair .ba-after { opacity: 0; transition: opacity 0.45s ease; }
+        .ba-pair:hover .ba-after { opacity: 1; }
+        .ba-pair:hover .ba-before { opacity: 0; transition: opacity 0.45s ease; }
+        .ba-pair .ba-before { transition: opacity 0.45s ease; }
+        @media (hover: none) {
+            .ba-pair .ba-hint { opacity: 1; }
+        }
+        .case-main > .case-block + .case-block { border-top: 2px solid #000; }
+        .case-block { padding: 1.5rem 0; }
+        @media (min-width: 768px) {
+            .case-block { padding: 1.75rem 0; }
+        }
+        .case-h2 {
+            font-weight: 900;
+            font-size: 1.5rem;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+        @media (min-width: 768px) {
+            .case-h2 { font-size: 1.875rem; }
+        }
+        .case-meta {
+            font-family: ui-monospace, monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #6b7280;
+            margin-bottom: 0.75rem;
+        }
+    </style>
+</head>
+<body class="bg-white text-black font-sans antialiased selection:bg-black selection:text-white">
+
+    <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b-2 border-black px-4 md:px-8 py-4 flex flex-wrap items-center justify-between gap-4">
+        <a href="index.html#ai-pm-capabilities" class="font-mono text-xs font-bold uppercase tracking-widest border-2 border-black px-3 py-2 hover:bg-black hover:text-white transition-colors">← <span data-i18n="nav_back">Back</span></a>
+        <button type="button" id="lang-toggle" class="font-mono text-xs font-bold border-2 border-black px-3 py-2 hover:bg-black hover:text-white transition-colors uppercase">[ EN / 中 ]</button>
+    </nav>
+
+    <!-- 1. Hero -->
+    <header class="border-b-2 border-black px-4 md:px-8 py-12 md:py-16 max-w-5xl mx-auto">
+        <p class="font-mono text-xs font-bold uppercase tracking-widest text-gray-500 mb-6" data-i18n="hero_tag">Project</p>
+        <h1 class="font-black text-4xl md:text-6xl lg:text-7xl uppercase tracking-tighter leading-[0.95] mb-8" data-i18n="hero_title">Seed Prompt Engineering</h1>
+        <p class="text-lg md:text-xl font-medium text-gray-700 max-w-3xl leading-relaxed border-l-4 border-black pl-6" data-i18n="hero_sub">
+            Building an evaluation-driven prompt optimization system for real-world text-to-image generation.
+        </p>
+    </header>
+
+    <!-- Keywords -->
+    <section class="border-b-2 border-black bg-[#f4f4f4] px-4 md:px-8 py-8 md:py-10 max-w-5xl mx-auto">
+        <h2 class="font-mono text-xs font-bold uppercase tracking-widest mb-4" data-i18n="kw_title">Signal vocabulary</h2>
+        <div class="flex flex-wrap gap-2 md:gap-3" id="kw-chips"></div>
+    </section>
+
+    <!-- Before / After（紧接关键词） -->
+    <section id="gallery" class="px-4 md:px-8 py-10 md:py-14 border-b-2 border-black bg-[#f4f4f4] max-w-6xl mx-auto w-full">
+        <h2 class="font-black text-3xl md:text-5xl uppercase tracking-tighter mb-2 max-w-5xl mx-auto" data-i18n="gal_h2">Before / After</h2>
+        <p class="font-mono text-xs text-gray-500 uppercase tracking-widest mb-4 max-w-5xl mx-auto" data-i18n="gal_sub">1:1 — hover to reveal after</p>
+        <p class="text-xs text-gray-500 max-w-5xl mx-auto mb-10 md:hidden ba-hint" data-i18n="gal_touch">桌面端可悬停对比；双指长按或另设备上查看优化后效果。</p>
+        <div class="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <!-- images/NN.1 = 原图 Before，NN.2 = 优化后 After -->
+            <figure class="ba-pair relative aspect-square border-2 border-black bg-gray-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden group">
+                <img class="ba-before absolute inset-0 w-full h-full object-cover" src="images/01.1.png" alt="案例 01 原图" loading="lazy" decoding="async">
+                <img class="ba-after absolute inset-0 w-full h-full object-cover" src="images/01.2.png" alt="案例 01 优化后" loading="lazy" decoding="async">
+                <figcaption class="absolute bottom-0 left-0 right-0 px-2 py-2 bg-black/90 text-white text-[9px] md:text-[10px] normal-case font-sans font-medium leading-snug pointer-events-none text-left">
+                    <span data-i18n="gal_p1">两只狗吃面，迪士尼风格动漫</span>
+                </figcaption>
+            </figure>
+            <figure class="ba-pair relative aspect-square border-2 border-black bg-gray-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden group">
+                <img class="ba-before absolute inset-0 w-full h-full object-cover" src="images/02.1.png" alt="案例 02 原图" loading="lazy" decoding="async">
+                <img class="ba-after absolute inset-0 w-full h-full object-cover" src="images/02.2.png" alt="案例 02 优化后" loading="lazy" decoding="async">
+                <figcaption class="absolute bottom-0 left-0 right-0 px-2 py-2 bg-black/90 text-white text-[9px] md:text-[10px] normal-case font-sans font-medium leading-snug pointer-events-none text-left">
+                    <span data-i18n="gal_p2">超人，美漫风格</span>
+                </figcaption>
+            </figure>
+            <figure class="ba-pair relative aspect-square border-2 border-black bg-gray-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden group">
+                <img class="ba-before absolute inset-0 w-full h-full object-cover" src="images/03.1.png" alt="案例 03 原图" loading="lazy" decoding="async">
+                <img class="ba-after absolute inset-0 w-full h-full object-cover" src="images/03.2.png" alt="案例 03 优化后" loading="lazy" decoding="async">
+                <figcaption class="absolute bottom-0 left-0 right-0 px-2 py-2 bg-black/90 text-white text-[9px] md:text-[10px] normal-case font-sans font-medium leading-snug pointer-events-none text-left">
+                    <span data-i18n="gal_p3">女子，中国工笔人物</span>
+                </figcaption>
+            </figure>
+            <figure class="ba-pair relative aspect-square border-2 border-black bg-gray-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden group">
+                <img class="ba-before absolute inset-0 w-full h-full object-cover" src="images/04.1.png" alt="案例 04 原图" loading="lazy" decoding="async">
+                <img class="ba-after absolute inset-0 w-full h-full object-cover" src="images/04.2.png" alt="案例 04 优化后" loading="lazy" decoding="async">
+                <figcaption class="absolute bottom-0 left-0 right-0 px-2 py-2 bg-black/90 text-white text-[9px] md:text-[10px] normal-case font-sans font-medium leading-snug pointer-events-none text-left">
+                    <span data-i18n="gal_p4">一男一女情侣，电影场景摄影</span>
+                </figcaption>
+            </figure>
+            <figure class="ba-pair relative aspect-square border-2 border-black bg-gray-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden group">
+                <img class="ba-before absolute inset-0 w-full h-full object-cover" src="images/05.1.png" alt="案例 05 原图" loading="lazy" decoding="async">
+                <img class="ba-after absolute inset-0 w-full h-full object-cover" src="images/05.2.png" alt="案例 05 优化后" loading="lazy" decoding="async">
+                <figcaption class="absolute bottom-0 left-0 right-0 px-2 py-2 bg-black/90 text-white text-[9px] md:text-[10px] normal-case font-sans font-medium leading-snug pointer-events-none text-left">
+                    <span data-i18n="gal_p5">马路上的交通灯，电影场景摄影</span>
+                </figcaption>
+            </figure>
+            <figure class="ba-pair relative aspect-square border-2 border-black bg-gray-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden group">
+                <img class="ba-before absolute inset-0 w-full h-full object-cover" src="images/06.1.png" alt="案例 06 原图" loading="lazy" decoding="async">
+                <img class="ba-after absolute inset-0 w-full h-full object-cover" src="images/06.2.png" alt="案例 06 优化后" loading="lazy" decoding="async">
+                <figcaption class="absolute bottom-0 left-0 right-0 px-2 py-2 bg-black/90 text-white text-[9px] md:text-[10px] normal-case font-sans font-medium leading-snug pointer-events-none text-left">
+                    <span data-i18n="gal_p6">沉睡女性，毕加索风格</span>
+                </figcaption>
+            </figure>
+            <figure class="ba-pair relative aspect-square border-2 border-black bg-gray-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden group">
+                <img class="ba-before absolute inset-0 w-full h-full object-cover" src="images/07.1.png" alt="案例 07 原图" loading="lazy" decoding="async">
+                <img class="ba-after absolute inset-0 w-full h-full object-cover" src="images/07.2.png" alt="案例 07 优化后" loading="lazy" decoding="async">
+                <figcaption class="absolute bottom-0 left-0 right-0 px-2 py-2 bg-black/90 text-white text-[9px] md:text-[10px] normal-case font-sans font-medium leading-snug pointer-events-none text-left">
+                    <span data-i18n="gal_p7">CG女性，游戏美术</span>
+                </figcaption>
+            </figure>
+            <figure class="ba-pair relative aspect-square border-2 border-black bg-gray-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden group">
+                <img class="ba-before absolute inset-0 w-full h-full object-cover" src="images/08.1.png" alt="案例 08 原图" loading="lazy" decoding="async">
+                <img class="ba-after absolute inset-0 w-full h-full object-cover" src="images/08.2.png" alt="案例 08 优化后" loading="lazy" decoding="async">
+                <figcaption class="absolute bottom-0 left-0 right-0 px-2 py-2 bg-black/90 text-white text-[9px] md:text-[10px] normal-case font-sans font-medium leading-snug pointer-events-none text-left">
+                    <span data-i18n="gal_p8">面部精华，产品摄影</span>
+                </figcaption>
+            </figure>
+        </div>
+    </section>
+
+    <!-- 项目背景 → 问题定义 → 角色 → 搭建 → 影响（同一 main，紧凑分隔） -->
+    <main class="case-main max-w-5xl mx-auto px-4 md:px-8 border-b-2 border-black">
+        <section id="context" class="case-block scroll-mt-24">
+            <h2 class="case-h2" data-i18n="ctx_h2">Business Context</h2>
+            <div class="text-sm md:text-[15px] font-medium text-gray-800 leading-relaxed space-y-3 max-w-3xl" data-i18n="ctx_body"></div>
+        </section>
+
+        <section id="problem" class="case-block scroll-mt-24">
+            <h2 class="case-h2" data-i18n="prob_h2">The Problem</h2>
+            <p class="case-meta" data-i18n="prob_sub">Three layers of framing</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-4 lg:gap-6 items-start">
+                <div class="border-l-2 border-black pl-4 min-w-0">
+                    <h3 class="font-black text-sm uppercase mb-2 tracking-tight" data-i18n="prob_l1_h">Layer 1 — Output quality</h3>
+                    <ul class="list-none space-y-1.5 text-xs md:text-sm font-medium text-gray-800" data-i18n="prob_l1_list"></ul>
+                </div>
+                <div class="border-l-2 border-black pl-4 min-w-0">
+                    <h3 class="font-black text-sm uppercase mb-2 tracking-tight" data-i18n="prob_l2_h">Layer 2 — Process</h3>
+                    <ul class="list-none space-y-1.5 text-xs md:text-sm font-medium text-gray-800" data-i18n="prob_l2_list"></ul>
+                </div>
+                <div class="border-l-2 border-black pl-4 min-w-0">
+                    <h3 class="font-black text-sm uppercase mb-2 tracking-tight" data-i18n="prob_l3_h">Layer 3 — Organization</h3>
+                    <ul class="list-none space-y-1.5 text-xs md:text-sm font-medium text-gray-800" data-i18n="prob_l3_list"></ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="role" class="case-block scroll-mt-24">
+            <h2 class="case-h2" data-i18n="role_h2">My Role</h2>
+            <p class="case-meta" data-i18n="role_sub">System builder, not one-off prompt writer</p>
+            <ul class="space-y-2 font-medium text-sm text-gray-900 max-w-3xl" data-i18n="role_list"></ul>
+        </section>
+
+        <section id="built" class="case-block scroll-mt-24">
+            <h2 class="case-h2" data-i18n="built_h2">What I Built</h2>
+            <p class="case-meta" data-i18n="built_sub">Four interconnected modules</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+                <article class="border-2 border-black p-4 md:p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white min-w-0">
+                    <h3 class="font-black text-sm uppercase mb-2 font-mono leading-tight" data-i18n="mod_a_h">A — Prompt templates</h3>
+                    <div class="text-xs md:text-sm text-gray-800 leading-relaxed font-medium space-y-2" data-i18n="mod_a_body"></div>
+                </article>
+                <article class="border-2 border-black p-4 md:p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white min-w-0">
+                    <h3 class="font-black text-sm uppercase mb-2 font-mono leading-tight" data-i18n="mod_b_h">B — Optimization standardization</h3>
+                    <div class="text-xs md:text-sm text-gray-800 leading-relaxed font-medium space-y-2" data-i18n="mod_b_body"></div>
+                </article>
+                <article class="border-2 border-black p-4 md:p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white min-w-0">
+                    <h3 class="font-black text-sm uppercase mb-2 font-mono leading-tight" data-i18n="mod_c_h">C — Aesthetic capability structure</h3>
+                    <div class="text-xs md:text-sm text-gray-800 leading-relaxed font-medium space-y-2" data-i18n="mod_c_body"></div>
+                </article>
+                <article class="border-2 border-black p-4 md:p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white min-w-0">
+                    <h3 class="font-black text-sm uppercase mb-2 font-mono leading-tight" data-i18n="mod_d_h">D — Evaluation system</h3>
+                    <div class="text-xs md:text-sm text-gray-800 leading-relaxed font-medium space-y-2" data-i18n="mod_d_body"></div>
+                </article>
+            </div>
+        </section>
+
+        <section id="impact" class="case-block scroll-mt-24 pb-6 md:pb-8">
+            <h2 class="case-h2" data-i18n="impact_h2">Impact</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 items-start mt-3">
+                <div class="border-l-2 border-black pl-4 min-w-0">
+                    <h3 class="font-black text-xs uppercase mb-2 tracking-wide" data-i18n="impact_res_h">Results</h3>
+                    <p class="text-xs md:text-sm text-gray-800 font-medium leading-relaxed" data-i18n="impact_res"></p>
+                </div>
+                <div class="border-l-2 border-black pl-4 min-w-0">
+                    <h3 class="font-black text-xs uppercase mb-2 tracking-wide" data-i18n="impact_method_h">Method layer</h3>
+                    <p class="text-xs md:text-sm text-gray-800 font-medium leading-relaxed" data-i18n="impact_method"></p>
+                </div>
+                <div class="border-l-2 border-black pl-4 min-w-0">
+                    <h3 class="font-black text-xs uppercase mb-2 tracking-wide" data-i18n="impact_org_h">Organization layer</h3>
+                    <p class="text-xs md:text-sm text-gray-800 font-medium leading-relaxed" data-i18n="impact_org"></p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="py-8 px-4 md:px-8 border-t-2 border-black flex flex-wrap justify-between gap-4 text-[10px] font-bold uppercase tracking-widest bg-black text-white">
+        <span>© 2026 LIJIAYANG</span>
+        <a href="index.html" class="hover:underline" data-i18n="nav_home">Home</a>
+    </footer>
+
+    <script>
+        const chipsEn = [
+            'Evaluation Framework', 'Quality Dimensions', 'Prompt Templates', 'Standardization',
+            'LLM-as-a-Judge', 'Consistency', 'Stability', 'Transferability', 'Iteration Loop'
+        ];
+        const chipsZh = [
+            '评测体系', '质量维度', 'Prompt 模板', '标准化',
+            'LLM-as-a-Judge', '一致性', '稳定性', '跨场景迁移', '持续优化'
+        ];
+
+        const translations = {
+            en: {
+                nav_back: 'Back', nav_home: 'Home',
+                hero_tag: 'Project',
+                hero_title: 'Seed Prompt Engineering',
+                hero_sub: 'Building an evaluation-driven prompt optimization system for real-world text-to-image generation.',
+                kw_title: 'Signal vocabulary',
+                ctx_h2: 'Business Context',
+                ctx_body: `<p>The Seed text-to-image model was already in real business use—not a one-off demo. Scenarios spanned photography, design, 3D, illustration, typography, art, and hyper-realistic imagery.</p>
+                    <p>Stakeholders needed more than “images that render.” They needed <strong>aesthetic quality</strong>, <strong>text–image alignment</strong>, <strong>style stability</strong>, and <strong>patterns that could transfer across scenes</strong>.</p>`,
+                prob_h2: 'The Problem',
+                prob_sub: 'Three layers of framing',
+                prob_l1_h: 'Layer 1 — Output quality',
+                prob_l1_list: `<li><span class="text-black font-bold">·</span> Unstable aesthetic expression</li>
+                    <li><span class="text-black font-bold">·</span> Style drift and mismatches</li>
+                    <li><span class="text-black font-bold">·</span> Weak text–image alignment</li>
+                    <li><span class="text-black font-bold">·</span> Subject integrity issues (missing or broken focal elements)</li>`,
+                prob_l2_h: 'Layer 2 — Process',
+                prob_l2_list: `<li><span class="text-black font-bold">·</span> Prompt tuning anchored to personal experience</li>
+                    <li><span class="text-black font-bold">·</span> Trial-and-error cycles that were hard to replay or audit</li>
+                    <li><span class="text-black font-bold">·</span> No shared baseline for “good enough”</li>`,
+                prob_l3_h: 'Layer 3 — Organization',
+                prob_l3_list: `<li><span class="text-black font-bold">·</span> Hard to migrate wins to other business scenarios</li>
+                    <li><span class="text-black font-bold">·</span> Collaboration overhead across roles</li>
+                    <li><span class="text-black font-bold">·</span> Gap between model capability and business-ready quality</li>`,
+                role_h2: 'My Role',
+                role_sub: 'System builder, not one-off prompt writer',
+                role_list: `<li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">01</span><span>Defined the evaluation problem behind image quality instability.</span></li>
+                    <li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">02</span><span>Designed reusable prompt optimization methods and codified optimization learnings.</span></li>
+                    <li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">03</span><span>Built quality dimensions and evaluation criteria.</span></li>
+                    <li class="flex gap-2"><span class="font-mono text-gray-400 shrink-0 text-xs">04</span><span>Introduced LLM-as-a-Judge as an auxiliary evaluation layer.</span></li>`,
+                built_h2: 'What I Built',
+                built_sub: 'Four interconnected modules',
+                mod_a_h: 'A — Prompt templates',
+                mod_a_body: `<p>To reduce dependence on individual intuition and one-off wording, I designed <strong>general prompt templates</strong> grounded in prompt-engineering mechanisms.</p>`,
+                mod_b_h: 'B — Optimization standardization',
+                mod_b_body: `<p>Established rules for <strong>style effects</strong>, <strong>aesthetic vocabulary</strong>, and <strong>redundant phrasing</strong> so rewrites become predictable.</p>
+                    <p>Prompt optimization moved from opaque trial-and-error to a <strong>rule-based, standardized</strong> workflow.</p>`,
+                mod_c_h: 'C — Aesthetic capability structure',
+                mod_c_body: `<p>Designed a <strong>multi-dimensional aesthetic vocabulary</strong> approach (PE method) to improve how different levels of aesthetic terms combine and orchestrate.</p>`,
+                mod_d_h: 'D — Evaluation system',
+                mod_d_body: `<p>Centered on aesthetics, text–image fit, style deviation, and stability—on top of human review, I layered in <strong>LLM-as-a-Judge</strong> for structured checks.</p>
+                    <p>It helped assess dimensions like alignment, subject completeness, and style consistency—accelerating <strong>sample screening</strong>, <strong>issue attribution</strong>, and <strong>prompt iteration</strong>.</p>`,
+                gal_h2: 'Before / After',
+                gal_sub: 'Prompt per tile — hover to compare optimized output',
+                gal_touch: 'On desktop, hover a tile to see the optimized image. On touch devices, use a larger screen or open the image files in <code class="font-mono text-[11px]">images/</code> to compare.',
+                gal_p1: 'Two dogs eating noodles, Disney-style anime',
+                gal_p2: 'Superman, American comic book style',
+                gal_p3: 'Woman, Chinese gongbi figure painting',
+                gal_p4: 'A man and a woman as a couple, cinematic photography',
+                gal_p5: 'Traffic lights on the road, cinematic photography',
+                gal_p6: 'Sleeping woman, Picasso style',
+                gal_p7: 'CG female character, game art',
+                gal_p8: 'Face serum, product photography',
+                impact_h2: 'Impact',
+                impact_res_h: 'Results',
+                impact_res: 'In target scenarios, Seed text-to-image aesthetic quality improved 120% relative to baseline.',
+                impact_method_h: 'Method layer',
+                impact_method: 'Prompt templates became long-lived assets. Optimization shifted from individual craft to repeatable, rule-based iteration tied to evaluation signals.',
+                impact_org_h: 'Organization layer',
+                impact_org: 'Collaboration and optimization efficiency improved; teams gained a shared language (dimensions + rubrics) and a path to reuse methods across scenarios.'
+            },
+            zh: {
+                nav_back: '返回', nav_home: '首页',
+                hero_tag: '项目',
+                hero_title: 'Seed Prompt Engineering',
+                hero_sub: '面向真实业务场景，为文生图建立评测驱动的 Prompt 优化系统。',
+                kw_title: '关键词',
+                ctx_h2: '项目背景',
+                ctx_body: `<p>Seed 文生图模型已进入真实业务场景，而非一次性 Demo。场景覆盖摄影、设计、三维、插画、字体、艺术、超写实等多类需求。</p>
+                    <p>业务侧需要的不仅是「能出图」，还包括<strong>美感表达</strong>、<strong>图文匹配</strong>、<strong>风格稳定性</strong>，以及<strong>可跨场景复用的方法</strong>。</p>`,
+                prob_h2: '问题定义',
+                prob_sub: '三层问题 framing',
+                prob_l1_h: '层 1 — 输出质量',
+                prob_l1_list: `<li><span class="text-black font-bold">·</span> 美感表达不稳定</li>
+                    <li><span class="text-black font-bold">·</span> 风格偏差、漂移</li>
+                    <li><span class="text-black font-bold">·</span> 图文匹配不足</li>
+                    <li><span class="text-black font-bold">·</span> 主体完整性不足（焦点元素缺失或破坏）</li>`,
+                prob_l2_h: '层 2 — 流程',
+                prob_l2_list: `<li><span class="text-black font-bold">·</span> Prompt 优化依赖个人经验</li>
+                    <li><span class="text-black font-bold">·</span> 试错过程难复盘、难审计</li>
+                    <li><span class="text-black font-bold">·</span> 缺乏统一的「好坏」基线</li>`,
+                prob_l3_h: '层 3 — 组织',
+                prob_l3_list: `<li><span class="text-black font-bold">·</span> 优化结果难以迁移到其他业务场景</li>
+                    <li><span class="text-black font-bold">·</span> 跨角色协作成本高</li>
+                    <li><span class="text-black font-bold">·</span> 模型能力与业务侧质量预期之间存在落差</li>`,
+                role_h2: '我的角色',
+                role_sub: '系统搭建者，而非一次性 Prompt 写手',
+                role_list: `<li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">01</span><span>定义文生图质量不稳定背后的评测问题。</span></li>
+                    <li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">02</span><span>设计可复用的 Prompt 优化方法，优化经验沉淀。</span></li>
+                    <li class="flex gap-2 border-b border-gray-200 pb-2"><span class="font-mono text-gray-400 shrink-0 text-xs">03</span><span>建立质量维度与评测标准。</span></li>
+                    <li class="flex gap-2"><span class="font-mono text-gray-400 shrink-0 text-xs">04</span><span>引入 LLM-as-a-Judge 作为辅助评估机制。</span></li>`,
+                built_h2: '我搭建了什么',
+                built_sub: '四个相互衔接的模块',
+                mod_a_h: 'A — Prompt 模板化',
+                mod_a_body: `<p>针对 Prompt 高度依赖个人经验、难以复制的问题，基于 PE 机制设计<strong>通用 Prompt 模板</strong>。</p>`,
+                mod_b_h: 'B — 优化标准化',
+                mod_b_body: `<p>建立风格效果、美感词与冗余词等方面的<strong>改写规则</strong>，使优化动作可预期、可对齐。</p>
+                    <p>把 Prompt 优化从「经验试错」推进为<strong>规则化、标准化</strong>的流程。</p>`,
+                mod_c_h: 'C — 美学能力结构化',
+                mod_c_body: `<p>设计<strong>美学词立体维度</strong>相关的 PE 方法，提升不同层次美学词的组合与调度能力。</p>`,
+                mod_d_h: 'D — 评测体系',
+                mod_d_body: `<p>围绕美感、图文匹配、风格偏差、稳定性等问题，在人工评审基础上引入 <strong>LLM-as-a-Judge</strong>，用于结构化判断关键维度。</p>
+                    <p>提升<strong>样例筛选</strong>、<strong>问题归因</strong>与 <strong>Prompt 迭代</strong>效率。</p>`,
+                gal_h2: 'Before / After',
+                gal_sub: '每张对应 Prompt — 悬停查看优化后出图',
+                gal_touch: '桌面端悬停方块即可查看优化后效果；触控设备可在大屏上悬停，或直接对照 <code class="font-mono text-[11px]">images/</code> 文件夹中的成对图片。',
+                gal_p1: '两只狗吃面，迪士尼风格动漫',
+                gal_p2: '超人，美漫风格',
+                gal_p3: '女子，中国工笔人物',
+                gal_p4: '一男一女情侣，电影场景摄影',
+                gal_p5: '马路上的交通灯，电影场景摄影',
+                gal_p6: '沉睡女性，毕加索风格',
+                gal_p7: 'CG女性，游戏美术',
+                gal_p8: '面部精华，产品摄影',
+                impact_h2: '影响',
+                impact_res_h: '结果层',
+                impact_res: '在目标场景下，Seed 文生图的美感表现相对基线提升120%',
+                impact_method_h: '方法层',
+                impact_method: 'Prompt 模板可长期复用；优化从个人经验试错，转为与评测信号绑定的规则化迭代。',
+                impact_org_h: '组织层',
+                impact_org: '协作与优化效率提升；团队共享「维度 + 量表」语言，并为跨场景迁移提供方法支撑。'
+            }
+        };
+
+        function renderChips(lang) {
+            const el = document.getElementById('kw-chips');
+            const list = lang === 'zh' ? chipsZh : chipsEn;
+            el.innerHTML = list.map(t =>
+                `<span class="inline-block border-2 border-black px-3 py-1.5 text-xs font-bold uppercase tracking-wide bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">${t}</span>`
+            ).join('');
+        }
+
+        function setLanguage(lang) {
+            document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'en';
+            document.body.classList.toggle('lang-zh', lang === 'zh');
+            const dict = translations[lang];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const k = el.getAttribute('data-i18n');
+                if (dict[k] != null) el.innerHTML = dict[k];
+            });
+            renderChips(lang);
+            const btn = document.getElementById('lang-toggle');
+            if (lang === 'en') {
+                btn.innerHTML = '[ EN / <span class="opacity-40">中</span> ]';
+            } else {
+                btn.innerHTML = '[ <span class="opacity-40">EN</span> / 中 ]';
+            }
+            document.title = lang === 'zh'
+                ? 'Seed Prompt Engineering | 生成式 AI 评测 — LIJIAYANG'
+                : 'Seed Prompt Engineering | GenAI Evaluation — LIJIAYANG';
+        }
+
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+            const zh = document.body.classList.contains('lang-zh');
+            setLanguage(zh ? 'en' : 'zh');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => setLanguage('en'));
+    </script>
+</body>
+</html>

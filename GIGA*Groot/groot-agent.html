@@ -1,0 +1,1962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giga-Shots STUDIO</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM (Production Minified) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel Standalone for in-browser JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#070707',
+                        surface: '#121212',
+                        'surface-light': '#1e1e1e',
+                        border: '#2a2a2a',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['"Instrument Serif"', 'serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #070707;
+            color: #d1d5db;
+            overflow: hidden; /* Prevent body scroll, React app handles its own scrolling */
+            font-family: 'Inter', system-ui, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* LIGHT MODE OVERRIDES */
+        body.light-mode { background-color: #f5f5f7 !important; color: #1d1d1f !important; }
+        .light-mode .text-white { color: #000000 !important; }
+        .light-mode .text-gray-300 { color: #333333 !important; }
+        .light-mode .text-gray-400 { color: #6e6e73 !important; }
+        .light-mode .text-gray-500 { color: #86868b !important; }
+        .light-mode .bg-background { background-color: #f5f5f7 !important; }
+        .light-mode .bg-surface { background-color: #ffffff !important; }
+        .light-mode .bg-surface-light { background-color: #fcfcfc !important; }
+        .light-mode .bg-black { background-color: #ffffff !important; }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .tooltip-group:hover .tooltip-box { opacity: 1 !important; }
+    </style>
+</head>
+<body class="selection:bg-gray-700 selection:text-white transition-colors duration-300">
+
+    <!-- REACT STUDIO APP CONTAINER -->
+    <div id="react-app-container"></div>
+
+    <!-- REACT STUDIO APP COMPONENT & LOGIC -->
+    <script type="text/babel">
+        const { useState, useRef, useEffect, useCallback, createContext, useContext } = React;
+
+        // ─── Gemini API Integration ───
+        const generateWithGemini = async (promptText) => {
+            const apiKey = ""; 
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: promptText }] }],
+                systemInstruction: { parts: [{ text: "你是一个名为 GIGA Agent 的资深AI创意广告总监。你专注于TikTok等平台的电商场景。请根据用户的需求和提供的参考策略，给出精简、专业、具有洞察力的创意建议或修改方案。回复语言为中文。尽量简短且排版清晰，可以使用 Markdown 语法如加粗等。" }] }
+            };
+
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let i = 0; i < 6; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error('API Error');
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "抱歉，我暂时无法生成内容。";
+                } catch (error) {
+                    if (i === 5) return "网络请求超时，请稍后再试。";
+                    await new Promise(r => setTimeout(r, delays[i]));
+                }
+            }
+        };
+
+        const formatMessageText = (text, textColor) => {
+            return text.split('\n').map((line, i) => (
+                <p key={i} style={{ marginBottom: line ? 8 : 0 }}>
+                    {line.split('**').map((part, j) => j % 2 === 1 ? <b key={j} style={{ color: textColor }}>{part}</b> : part)}
+                </p>
+            ));
+        };
+
+        // ─── Theme Context ───
+        const ThemeCtx = createContext(null);
+        const useTheme = () => useContext(ThemeCtx);
+
+        const makeTokens = (dark) => ({
+            bg:           dark ? "#070707" : "#fafaf9",
+            bgSubtle:     dark ? "#0e0e0e" : "#f5f5f4",
+            surface:      dark ? "#121212" : "#ffffff",
+            surfaceHover: dark ? "#1a1a1a" : "#f9f9f8",
+            border:       dark ? "#2a2a2a" : "#e7e5e4",
+            borderHover:  dark ? "#3a3a3a" : "#d6d3d1",
+            text:         dark ? "#f3f4f6" : "#1c1917",
+            textSub:      dark ? "#9ca3af" : "#78716c",
+            textMuted:    dark ? "#6b7280" : "#a8a29e",
+            textFaint:    dark ? "#374151" : "#d6d3d1",
+            accentBg:     dark ? "#ffffff" : "#1c1917",
+            accentFg:     dark ? "#070707" : "#ffffff",
+            purple:       "#e800ff",
+            purpleMuted:  dark ? "rgba(232,0,255,0.12)" : "rgba(232,0,255,0.08)",
+            canvasBg:     dark ? "#0a0a0a" : "#fafaf9",
+            canvasDot:    dark ? "#1f1f1f" : "#d6d3d1",
+            scrollThumb:  dark ? "#2a2a2a" : "#e7e5e4",
+            pageBg: dark
+                ? "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(45,35,60,0.45) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 95% 5%, rgba(20,30,50,0.35) 0%, transparent 60%), #070707"
+                : "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(220,215,240,0.4) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 95% 5%, rgba(210,225,240,0.3) 0%, transparent 60%), #fafaf9",
+            mono: "'DM Mono', 'Fira Code', monospace",
+            sans: "'Inter', system-ui, sans-serif",
+            serif: "'Instrument Serif', serif",
+            dark,
+        });
+
+        // ─── Mock Data Definition ───
+        const INSIGHTS_CARDS = [
+            { id:1,  title:"Lanyard Keren",        sub:"Tingkatkan gayamu dengan lanyard serbaguna",   tab:"TTS Creative",       dnu:436.43, cpi:8.55,  trend:+12.3, color:"#2563eb" },
+            { id:2,  title:"Gamis Airflow Saku",   sub:"Material airflow premium yang adem dan jatuh", tab:"TTS Creative",       dnu:413.67, cpi:4.56,  trend:-3.2,  color:"#7c3aed" },
+            { id:3,  title:"Solar Power Bank",     sub:"10000mAh large capacity, built-in flashlight", tab:"TTS Creative",       dnu:374.68, cpi:4.0,   trend:+8.7,  color:"#d97706" },
+            { id:4,  title:"Summer Collection",    sub:"Drop 2024 – limited seasonal release",         tab:"TTS Material",       dnu:352.39, cpi:53.07, trend:+22.1, color:"#059669" },
+            { id:5,  title:"Flash Sale Weekend",   sub:"Penawaran terbatas, jangan sampai terlewat",   tab:"TTS Material",       dnu:298.12, cpi:6.33,  trend:-8.4,  color:"#dc2626" },
+        ];
+
+        const GROOT_HISTORY = [
+            { id:"g1", name:"Summer Sale 2024",  time:"2h ago",     status:"done",    nodeCount:6 },
+            { id:"g2", name:"Lanyard Campaign",  time:"Yesterday",  status:"done",    nodeCount:4 },
+            { id:"g3", name:"Q4 Product Launch", time:"3 days ago", status:"running", nodeCount:8 },
+            { id:"g4", name:"Skincare Bundle",   time:"Last week",  status:"done",    nodeCount:3 },
+            { id:"g5", name:"Flash Deal Series", time:"Last week",  status:"done",    nodeCount:5 },
+        ];
+
+        const GALLERY = {
+            g1:["#f59e0b","#ef4444","#3b82f6","#8b5cf6","#10b981","#f97316"],
+            g2:["#2563eb","#1d4ed8","#3b82f6","#60a5fa"],
+        };
+
+        const AGENT_MODES = [
+            { id:"standard",  icon:"◇", label:"标准模式", desc:"最常用的AI生成模式，外挂知识库功能。" },
+            { id:"promo",     icon:"◩", label:"推广图Agent", desc:"高效生成转化率高的推广图素材。" },
+            { id:"shop",      icon:"◪", label:"商店图Agent", desc:"TikTok Shop商品展示图批量生成。" },
+            { id:"incentive", icon:"◧", label:"Incentive玩法Agent", desc:"快速产出Incentive智能素材。" },
+            { id:"video",     icon:"▷", label:"视频生成", desc:"使用AI生成短视频片段。" },
+            { id:"coding",    icon:"⌨", label:"AI Coding Agent", desc:"处理复杂逻辑的编程智能体。" }
+        ];
+
+        const GROOT_GROWTH_MOCK = [
+            { id:"gg1", label:"Summer Campaign", author:"Alex", colSpan:2, rowSpan:2, color:"#1d2a4a" },
+            { id:"gg2", label:"Flash Sale Story", author:"Sarah", colSpan:1, rowSpan:1, color:"#2a1a2e" },
+            { id:"gg3", label:"Competitor Remix", author:"Mike", colSpan:1, rowSpan:2, color:"#0a2a1a" },
+            { id:"gg4", label:"Lifestyle Feed", author:"Emma", colSpan:1, rowSpan:1, color:"#2a1a0a" },
+            { id:"gg5", label:"Seasonal Promo", author:"Alex", colSpan:1, rowSpan:2, color:"#0a1a2a" },
+            { id:"gg6", label:"Product Close-up", author:"John", colSpan:2, rowSpan:1, color:"#1a1a2a" },
+            { id:"gg7", label:"Viral Hook Video", author:"Sarah", colSpan:1, rowSpan:1, color:"#2a0a1a" },
+            { id:"gg8", label:"App Promo UI", author:"Mike", colSpan:1, rowSpan:1, color:"#2a1a2e" },
+            { id:"gg9", label:"Event Banner", author:"Emma", colSpan:1, rowSpan:1, color:"#1d2a4a" },
+            { id:"gg10", label:"Sale Countdown", author:"Alex", colSpan:1, rowSpan:1, color:"#0a2a1a" },
+        ];
+
+        const PRODUCTION_TEMPLATES = [
+            { id:"p1", name:"TTS Banner 1:1",  type:"Banner", size:"1:1",  bizLine:"TikTok Shop", updated:"2026/03/10", thumb:"#1d4ed8" },
+            { id:"p2", name:"Story 9:16 Pack", type:"Story",  size:"9:16", bizLine:"TikTok Shop", updated:"2026/03/08", thumb:"#4c1d95" },
+            { id:"p3", name:"Feed Square Pro", type:"Feed",   size:"1:1",  bizLine:"Shopee",      updated:"2026/03/05", thumb:"#064e3b" },
+            { id:"p4", name:"Reels 4:5 Lite",  type:"Reels",  size:"4:5",  bizLine:"TikTok Shop", updated:"2026/02/28", thumb:"#78350f" },
+            { id:"p5", name:"Carousel Set A",  type:"Banner", size:"16:9", bizLine:"Shopee",      updated:"2026/02/20", thumb:"#7f1d1d" },
+            { id:"p6", name:"Vertical Ad Kit", type:"Story",  size:"9:16", bizLine:"Lazada",      updated:"2026/02/15", thumb:"#0c4a6e" },
+        ];
+
+        const AUTOMATION_ITEMS = [
+            { id:"a1", name:"TTS Daily Refresh",    app:"TikTok Shop", country:"ID", strategy:"Top-DNU recall",    status:"active", updated:"2026/03/11" },
+            { id:"a2", name:"Story Repurpose Flow", app:"TikTok Shop", country:"PH", strategy:"CPI optimized",     status:"paused", updated:"2026/03/09" },
+            { id:"a3", name:"Seasonal Banner Auto", app:"Shopee",      country:"MY", strategy:"Trend-based recall", status:"active", updated:"2026/03/07" },
+            { id:"a4", name:"Flash Deal Trigger",   app:"Lazada",      country:"TH", strategy:"Manual",             status:"error",  updated:"2026/02/28" },
+        ];
+
+        const AIGC_CAPABILITIES = [
+            { id:"c1", name:"素材翻译&Resize",        date:"2025/12/01", desc:"对已有素材进行翻译、尺寸修改的派生",                      thumb:"#1e3a8a" },
+            { id:"c2", name:"自动复刻",               date:"2025/12/01", desc:"对已有素材进行自动复刻",                                  thumb:"#064e3b" },
+            { id:"c3", name:"NanoBanana改变色龙素材",  date:"2025/11/25", desc:"用NanoBananaPro对已有素材进行编辑，支持任意修改内容、尺寸", thumb:"#78350f" },
+            { id:"c4", name:"Veo3.1视频生成",         date:"2025/11/14", desc:"Veo3.1生产视频 8s",                                      thumb:"#1e1b4b" },
+            { id:"c5", name:"seedance视频ae包装（ID）",date:"2026/03/11", desc:"Seedance + AE 合成，印尼市场",                           thumb:"#431407" },
+            { id:"c6", name:"seedance视频ae包装（PH）",date:"2026/03/11", desc:"Seedance + AE 合成，菲律宾市场",                         thumb:"#052e16" },
+            { id:"c7", name:"seedance视频ae包装（BR）",date:"2026/03/10", desc:"Seedance + AE 合成，巴西市场",                           thumb:"#0c1445" },
+            { id:"c8", name:"tt尾贴替换为tt lite",    date:"2026/03/09", desc:"TikTok 尾帧替换自动化流程",                               thumb:"#2e1065" },
+        ];
+
+        const PROMO_DATA_AGENT_RECOMMENDATIONS = [
+            {
+                title: "高对比度色彩 (High Contrast Colors)",
+                items: [
+                    { id: "p1", color: "#ef4444", prompt: "使用高饱和度红色背景，配合强光源打光，突出商品质感。", insight: "CTR 提升 18%" },
+                    { id: "p2", color: "#f59e0b", prompt: "暖色调渐变背景，营造大促氛围，添加显眼的价格标签。", insight: "停留时长 +2.1s" },
+                    { id: "p3", color: "#10b981", prompt: "清新薄荷绿背景，适合自然与健康类产品，带轻微噪点质感。", insight: "转化率 +5%" },
+                    { id: "p4", color: "#3b82f6", prompt: "科技蓝冷色调，配合极简排版，展现专业与高级感。", insight: "CTR 提升 12%" },
+                    { id: "p5", color: "#8b5cf6", prompt: "神秘紫色氛围光，适合美妆或潮流单品，增加视觉深度。", insight: "互动率 +8%" },
+                ]
+            },
+            {
+                title: "极致局部特写 (Extreme Close-ups)",
+                items: [
+                    { id: "c1", color: "#1c1917", prompt: "微距镜头捕捉产品材质细节，景深模糊背景，文字居中排版。", insight: "点击率 +22%" },
+                    { id: "c2", color: "#292524", prompt: "模特手持产品特写，展示真实使用比例，暖光侧面打光。", insight: "转化率 +15%" },
+                    { id: "c3", color: "#44403c", prompt: "产品核心功能区特写，配合指示线与数据标注，理性说服。", insight: "信任度提升" },
+                    { id: "c4", color: "#57534e", prompt: "动态瞬间抓拍，如水花飞溅或粉末飞扬，定格局部冲击力。", insight: "视觉停留 +3s" },
+                    { id: "c5", color: "#78716c", prompt: "极致对称构图，左右对比展示产品细节差异，引导视觉焦点。", insight: "CTR 提升 14%" },
+                ]
+            }
+        ];
+
+        const makeNodes = (id) => {
+            if (id === "promo_data_agent") {
+                const nodes = [];
+                const startX = 80;
+                const startY = 150;
+                const xGap = 240;
+                const yGap = 300;
+                const width = 220;
+                const imgHeight = 140;
+
+                PROMO_DATA_AGENT_RECOMMENDATIONS.forEach((group, gi) => {
+                    group.items.forEach((item, ii) => {
+                        nodes.push({
+                            id: `rec-${gi}-${ii}-${item.id}`,
+                            label: group.title,
+                            x: startX + ii * xGap,
+                            y: startY + gi * yGap,
+                            type: "promo_rec",
+                            width,
+                            imgHeight,
+                            color: item.color,
+                            prompt: item.prompt,
+                            insight: item.insight,
+                        });
+                    });
+                });
+
+                // If no recommendations, fall back to a single root node
+                if (!nodes.length) {
+                    return [{
+                        id: "promo-root",
+                        label: "Top-DNU 数据智荐",
+                        x: 120,
+                        y: 180,
+                        type: "root",
+                        width: 220,
+                        imgHeight: 140,
+                        color: "#8b5cf6",
+                        prompt: "",
+                        insight: "",
+                    }];
+                }
+                return nodes;
+            }
+            if (id === "incentive_agent_canvas") {
+                return Array.from({length: 10}).map((_, i) => ({
+                    id: `inc-${i}`, label: `Incentive Style ${i+1}`,
+                    x: (i % 5) * 300 + 50, y: Math.floor(i / 5) * 360 + 100,
+                    type: "square", width: 240, imgHeight: 240,
+                    color: ["#f59e0b","#ef4444","#3b82f6","#8b5cf6","#10b981","#f97316", "#059669", "#dc2626", "#4f46e5", "#be185d"][i % 10],
+                    prompt: `Incentive 玩法视觉图，高亮显示第 ${i+1} 阶段奖励，强调福利感与稀缺性。`
+                }));
+            }
+            
+            const bases = {
+                g1:[
+                    {id:"n0",label:"Summer Sale 2024",x:300,y:120, type:"root", width:180, imgHeight:90, color:"#f59e0b"},
+                    {id:"n1",label:"Banner Set",      x:110,y:280,type:"branch",width:180, imgHeight:90, color:"#ef4444"},
+                    {id:"n2",label:"Story Pack",      x:300,y:280,type:"branch",width:180, imgHeight:90, color:"#3b82f6"},
+                    {id:"n3",label:"Feed Square",     x:490,y:280,type:"branch",width:180, imgHeight:90, color:"#8b5cf6"},
+                    {id:"n4",label:"9:16 Video",      x:110,y:440,type:"leaf",  width:180, imgHeight:90, color:"#f97316"},
+                    {id:"n5",label:"1:1 Static",      x:300,y:440,type:"leaf",  width:180, imgHeight:90, color:"#10b981"},
+                ],
+                g2:[
+                    {id:"n0",label:"Lanyard Campaign",x:300,y:120, type:"root",  width:180, imgHeight:90, color:"#2563eb"},
+                    {id:"n1",label:"Product Hero",    x:160,y:280,type:"branch",width:180, imgHeight:90, color:"#1d4ed8"},
+                    {id:"n2",label:"Lifestyle Shot",  x:450,y:280,type:"branch",width:180, imgHeight:90, color:"#60a5fa"},
+                    {id:"n3",label:"Detail Close-up", x:160,y:440,type:"leaf",  width:180, imgHeight:90, color:"#3b82f6"},
+                ]
+            };
+            return bases[id] || bases["g1"];
+        };
+
+        const EDGES = {
+            g1:[["n0","n1"],["n0","n2"],["n0","n3"],["n1","n4"],["n2","n5"]],
+            g2:[["n0","n1"],["n0","n2"],["n1","n3"]],
+            promo_data_agent: [],
+            incentive_agent_canvas: []
+        };
+
+        // ─── Shared Components ───
+        function GigaLogo({ size = 24 }) {
+            return (
+                <svg viewBox="0 0 100 100" width={size} height={size} fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M 50 0 A 50 50 0 1 0 100 50 H 75 A 25 25 0 1 1 50 25 V 0 Z" fill="white"/>
+                    <rect x="50" y="25" width="25" height="25" fill="#e800ff"/>
+                </svg>
+            );
+        }
+
+        function ThemeToggle({ isDark, toggle }) {
+            const T = useTheme();
+            return (
+                <button onClick={toggle} style={{
+                    position:"relative", width:44, height:24, borderRadius:12,
+                    border:`1px solid ${T.border}`,
+                    background: isDark ? "#3a3a50" : "#e7e5e4",
+                    cursor:"pointer", transition:"background 0.3s", padding:0, flexShrink:0,
+                }}>
+                    <span style={{ position:"absolute", left:5, top:"50%", transform:"translateY(-50%)", fontSize:9, opacity:isDark?0.4:0, transition:"opacity 0.2s", lineHeight:1 }}>☀️</span>
+                    <span style={{ position:"absolute", right:5, top:"50%", transform:"translateY(-50%)", fontSize:9, opacity:isDark?0:0.5, transition:"opacity 0.2s", lineHeight:1 }}>🌙</span>
+                    <span style={{
+                        position:"absolute", top:2, left:isDark?21:2, width:18, height:18, borderRadius:"50%",
+                        background: isDark?"#a8a8c0":"#ffffff",
+                        boxShadow:"0 1px 4px rgba(0,0,0,0.2)",
+                        transition:"left 0.25s cubic-bezier(0.34,1.56,0.64,1), background 0.3s",
+                        display:"flex", alignItems:"center", justifyContent:"center", fontSize:9,
+                    }}>{isDark?"🌙":"☀️"}</span>
+                </button>
+            );
+        }
+
+        function StatusDot({ status }) {
+            const T = useTheme();
+            return (
+                <span style={{
+                    display:"inline-block", width:6, height:6, borderRadius:"50%", flexShrink:0,
+                    background: status==="running" ? "#10b981" : T.textFaint,
+                    boxShadow: status==="running" ? "0 0 0 2px rgba(16,185,129,0.2)" : "none",
+                }} />
+            );
+        }
+
+        const ActionBtn = ({ children, onClick }) => {
+            const T = useTheme();
+            return (
+                <button onClick={onClick} style={{
+                    display:"flex", alignItems:"center", gap:6,
+                    padding:"7px 16px", borderRadius:8,
+                    background: T.dark ? "#ffffff" : "#1c1917",
+                    color: T.dark ? "#070707" : "#ffffff",
+                    border:"none", fontSize:12, fontWeight:500, cursor:"pointer",
+                    whiteSpace:"nowrap", flexShrink:0,
+                    transition:"opacity 0.15s",
+                }}>{children}</button>
+            );
+        };
+
+        function PageShell({ title, subtitle, action, tabs, activeTab, onTab, filterBar, children }) {
+            const T = useTheme();
+            return (
+                <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:T.pageBg, overflow:"hidden" }}>
+                    <div style={{ flexShrink:0, background:T.surface, borderBottom:`1px solid ${T.border}` }}>
+                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px 0" }}>
+                            <div>
+                                <h2 style={{ fontFamily:T.serif, fontSize:22, fontWeight:400, color:T.text, letterSpacing:"-0.3px" }}>{title}</h2>
+                                {subtitle && <p style={{ fontSize:11, color:T.textMuted, marginTop:2 }}>{subtitle}</p>}
+                            </div>
+                            {action && <div style={{ paddingBottom:2 }}>{action}</div>}
+                        </div>
+                        {tabs && (
+                            <div style={{ display:"flex", padding:"0 28px", marginTop:4 }}>
+                                {tabs.map((tab,i) => (
+                                    <button key={tab} onClick={() => onTab(i)} style={{
+                                        padding:"10px 13px", border:"none", background:"transparent",
+                                        fontSize:12, fontWeight:i===activeTab?600:400,
+                                        color:i===activeTab?T.text:T.textMuted,
+                                        cursor:"pointer", position:"relative", whiteSpace:"nowrap", transition:"color 0.15s",
+                                    }}>
+                                        {tab}
+                                        {i===activeTab && <span style={{ position:"absolute", bottom:0, left:13, right:13, height:2, background:T.text, borderRadius:1 }} />}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    {filterBar && (
+                        <div style={{ flexShrink:0, padding:"12px 28px", borderBottom:`1px solid ${T.border}`, display:"flex", gap:8, alignItems:"center", flexWrap:"wrap", background:T.pageBg }}>
+                            {filterBar}
+                        </div>
+                    )}
+                    <div style={{ flex:1, overflowY:"auto", padding:"24px 28px 40px" }}>{children}</div>
+                </div>
+            );
+        }
+
+        function FilterSelect({ placeholder }) {
+            const T = useTheme();
+            return (
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 11px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, minWidth:130, cursor:"pointer", color:T.textMuted, fontSize:12, gap:8 }}>
+                    <span>{placeholder}</span><span style={{ fontSize:8, opacity:0.4 }}>▼</span>
+                </div>
+            );
+        }
+        function FilterInput({ placeholder, value, onChange, onKeyDown }) {
+            const T = useTheme();
+            return (
+                <div style={{ display:"flex", alignItems:"center", gap:7, padding:"7px 11px", borderRadius:8, border:`1px solid ${T.border}`, background:T.surface, flex:1, minWidth:150 }}>
+                    <input value={value} onChange={onChange} onKeyDown={onKeyDown} placeholder={placeholder}
+                        style={{ border:"none", outline:"none", background:"none", fontSize:12, color:T.text, width:"100%" }} />
+                </div>
+            );
+        }
+        function FilterTag({ label, onRemove }) {
+            const T = useTheme();
+            return (
+                <div style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 9px", borderRadius:6, border:`1px solid ${T.border}`, background:T.surface, fontSize:11, color:T.textSub }}>
+                    {label}
+                    <button onClick={onRemove} style={{ background:"none", border:"none", cursor:"pointer", color:T.textMuted, fontSize:10, padding:0, lineHeight:1 }}>✕</button>
+                </div>
+            );
+        }
+        function FilterSearchClear({ onSearch, onClear }) {
+            const T = useTheme();
+            return (
+                <React.Fragment>
+                    <ActionBtn onClick={onSearch}>Search</ActionBtn>
+                    <button onClick={onClear} style={{ padding:"7px 14px", borderRadius:8, border:`1px solid ${T.border}`, background:"transparent", color:T.textSub, fontSize:12, cursor:"pointer" }}>Clear</button>
+                </React.Fragment>
+            );
+        }
+        function EmptyState({ icon, message }) {
+            const T = useTheme();
+            return (
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:100, gap:12, color:T.textMuted }}>
+                    <div style={{ fontSize:36, opacity:0.2 }}>{icon}</div>
+                    <div style={{ fontSize:13 }}>{message}</div>
+                </div>
+            );
+        }
+
+        // ─── Sidebar ───
+        const SIDEBAR_W  = 252;
+        const SIDEBAR_CW = 52; 
+
+        function Sidebar({ collapsed, onToggleCollapse, activeNav, setActiveNav, grootHistory, activeGroot, setActiveGroot, grootView, setGrootView, isDark, toggleDark, isAgentChatOpen }) {
+            const T = useTheme();
+            const [grootOpen, setGrootOpen] = useState(true);
+            const isGrootActive = activeNav === "groot";
+            const w = collapsed ? SIDEBAR_CW : SIDEBAR_W;
+
+            const topItems = [
+                { key:"insights",   icon:"◈", label:"Insights"   },
+                { key:"production", icon:"◐", label:"Production" },
+                { key:"automation", icon:"⟳", label:"Automation" },
+                { key:"aigclab",    icon:"⬡", label:"AIGC Lab"   },
+                { key:"airepro",    icon:"◎", label:"AI Repro"   },
+            ];
+
+            return (
+                <div style={{
+                    position:"fixed", left:0, top:0, bottom:0, width:w,
+                    background: T.dark
+                        ? "linear-gradient(180deg, #161620 0%, #111114 40%, #0d0d0f 100%)"
+                        : T.surface,
+                    borderRight:`1px solid ${T.border}`,
+                    display:"flex", flexDirection:"column", fontFamily:T.sans, zIndex:50,
+                    transition:"width 0.22s cubic-bezier(0.4,0,0.2,1), background 0.25s, border-color 0.25s",
+                    overflow:"hidden",
+                }}>
+                    <div style={{ padding:"16px 12px 13px", borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, minHeight:56 }}>
+                        <button
+                            onClick={() => { setActiveNav("groot"); setActiveGroot(null); setGrootView("home"); }}
+                            style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:"none", cursor:"pointer", padding:0, flexShrink:0 }}
+                        >
+                            <GigaLogo size={20} />
+                            {!collapsed && (
+                                <div style={{ overflow:"hidden", textAlign: "left" }}>
+                                    <div style={{ fontSize:13, fontWeight:500, letterSpacing:"0.04em", color:T.text, whiteSpace:"nowrap" }}>Giga-Shots</div>
+                                    <div style={{ fontSize:9, color:T.textMuted, marginTop:1, fontFamily:T.mono, letterSpacing:"0.08em" }}>STUDIO</div>
+                                </div>
+                            )}
+                        </button>
+                        {!collapsed && <ThemeToggle isDark={isDark} toggle={toggleDark} />}
+                    </div>
+
+                    <div style={{ flex:1, overflowY:"auto", overflowX:"hidden", padding: collapsed ? "8px 6px 16px" : "8px 8px 16px" }}>
+                        <button
+                            onClick={onToggleCollapse}
+                            style={{
+                                display:"flex", alignItems:"center", justifyContent: collapsed ? "center" : "flex-end",
+                                width:"100%", padding: collapsed ? "7px 0" : "4px 10px 8px",
+                                border:"none", background:"transparent", cursor:"pointer",
+                                color:T.textFaint, fontSize:11, transition:"color 0.15s",
+                                marginBottom:2,
+                            }}>
+                            <span style={{ display:"inline-block", transform: collapsed ? "rotate(180deg)" : "none", transition:"transform 0.22s", fontSize:10, opacity:0.5 }}>◀</span>
+                        </button>
+
+                        {topItems.map(item => (
+                            <button key={item.key} onClick={() => setActiveNav(item.key)}
+                                style={{
+                                    display:"flex", alignItems:"center", gap: collapsed ? 0 : 9,
+                                    justifyContent: collapsed ? "center" : "flex-start",
+                                    width:"100%", padding: collapsed ? "9px 0" : "8px 10px",
+                                    borderRadius:7, border:"none", cursor:"pointer",
+                                    background: activeNav===item.key ? T.bgSubtle : "transparent",
+                                    color: activeNav===item.key ? T.text : T.textMuted,
+                                    fontSize:13, fontWeight: activeNav===item.key ? 500 : 400,
+                                    textAlign:"left", marginBottom:1,
+                                    transition:"background 0.12s, color 0.12s",
+                                }}>
+                                <span style={{ fontSize: collapsed ? 14 : 11, width: collapsed ? "auto" : 14, textAlign:"center", opacity: collapsed ? (activeNav===item.key?1:0.55) : 0.65, flexShrink:0 }}>{item.icon}</span>
+                                {!collapsed && item.label}
+                            </button>
+                        ))}
+
+                        <div style={{ height:1, background:T.border, margin: collapsed ? "8px 6px 10px" : "8px 4px 10px" }} />
+
+                        <div>
+                            <div style={{ display:"flex", alignItems:"center", borderRadius:7, overflow:"hidden", marginBottom:2 }}>
+                                <button
+                                    onClick={() => { setActiveNav("groot"); setActiveGroot(null); setGrootView("home"); }}
+                                    style={{
+                                        flex:1, display:"flex", alignItems:"center",
+                                        justifyContent: collapsed ? "center" : "flex-start",
+                                        gap: collapsed ? 0 : 9,
+                                        padding: collapsed ? "9px 0" : "8px 10px",
+                                        border:"none", cursor:"pointer",
+                                        background: isGrootActive && !activeGroot ? T.bgSubtle : "transparent",
+                                        color: isGrootActive ? T.text : T.textMuted,
+                                        fontSize:13, fontWeight: isGrootActive ? 500 : 400,
+                                        textAlign:"left", transition:"background 0.12s, color 0.12s",
+                                    }}>
+                                    <span style={{ fontSize: collapsed ? 14 : 11, width: collapsed ? "auto" : 14, textAlign:"center", opacity: collapsed ? (isGrootActive?1:0.55) : 0.65, flexShrink:0 }}>✦</span>
+                                    {!collapsed && "Groot"}
+                                </button>
+                                {!collapsed && (
+                                    <button
+                                        onClick={() => setGrootOpen(o => !o)}
+                                        style={{ padding:"8px 8px", border:"none", background:"transparent", cursor:"pointer", color:T.textFaint, fontSize:9, flexShrink:0, transition:"transform 0.2s", transform: grootOpen ? "rotate(0deg)" : "rotate(-90deg)" }}>▼</button>
+                                )}
+                            </div>
+
+                            {!collapsed && grootOpen && (
+                                <div style={{ paddingLeft:4 }}>
+                                    <button
+                                        onClick={() => { setActiveNav("groot"); setActiveGroot(null); setGrootView("home"); }}
+                                        style={{ display:"flex", alignItems:"center", gap:7, width:"100%", padding:"6px 10px", borderRadius:6, border:`1px dashed ${T.border}`, background:"transparent", color:T.textMuted, fontSize:11, cursor:"pointer", marginBottom:3, transition:"all 0.12s" }}>
+                                        <span style={{ fontSize:13, lineHeight:1 }}>+</span> New Canvas
+                                    </button>
+
+                                    {grootHistory.map(g => {
+                                        const isActive = activeGroot === g.id && isGrootActive;
+                                        return (
+                                            <button key={g.id}
+                                                onClick={() => { setActiveNav("groot"); setActiveGroot(g.id); setGrootView("canvas"); }}
+                                                style={{ display:"flex", alignItems:"center", gap:8, width:"100%", padding:"7px 10px", borderRadius:6, border:"none", cursor:"pointer", background:isActive?T.bgSubtle:"transparent", color:isActive?T.text:T.textSub, fontSize:12, textAlign:"left", marginBottom:1, transition:"background 0.12s, color 0.12s" }}>
+                                                <StatusDot status={g.status} />
+                                                <div style={{ flex:1, minWidth:0 }}>
+                                                    <div style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontWeight:isActive?500:400, fontSize:12 }}>{g.name}</div>
+                                                    <div style={{ fontSize:10, color:T.textFaint, marginTop:1 }}>{g.time}</div>
+                                                </div>
+                                                {isActive && grootView==="canvas" && !isAgentChatOpen && (
+                                                    <span style={{ fontSize:8, color:T.purple, fontFamily:T.mono, flexShrink:0 }}>⬡</span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {collapsed && (
+                            <div style={{ marginTop:8, display:"flex", justifyContent:"center" }}>
+                                <ThemeToggle isDark={isDark} toggle={toggleDark} />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── Insights View ───
+        const INSIGHT_TABS = ["TTS Creative","TTS Material","TT Creative","TT Material","Non-TT Creative","Competitor Creative"];
+        const SORT_OPTIONS = [
+            { key:"dnu-desc",  label:"DNU ↓" },
+            { key:"dnu-asc",   label:"DNU ↑" },
+            { key:"cpi-asc",   label:"CPI ↓" },
+            { key:"trend-desc",label:"Trend ↓" },
+        ];
+
+        function InsightsView() {
+            const T = useTheme();
+            const [activeTab, setActiveTab] = useState(0);
+            const [keyword, setKeyword]     = useState("");
+            const [sortKey, setSortKey]     = useState("dnu-desc");
+            const [sortOpen, setSortOpen]   = useState(false);
+            const [hovered, setHovered]     = useState(null);
+            const [visible, setVisible]     = useState(new Set());
+
+            useEffect(() => {
+                setVisible(new Set());
+                const filtered = INSIGHTS_CARDS.filter(c => c.tab === INSIGHT_TABS[activeTab]);
+                filtered.forEach((c,i) => setTimeout(() => setVisible(v => new Set([...v, c.id])), i * 40));
+            }, [activeTab]);
+
+            const sorted = [...INSIGHTS_CARDS]
+                .filter(c => c.tab === INSIGHT_TABS[activeTab])
+                .filter(c => c.title.toLowerCase().includes(keyword.toLowerCase()) || c.sub.toLowerCase().includes(keyword.toLowerCase()))
+                .sort((a,b) => {
+                    if (sortKey==="dnu-desc")   return b.dnu - a.dnu;
+                    if (sortKey==="dnu-asc")    return a.dnu - b.dnu;
+                    if (sortKey==="cpi-asc")    return a.cpi - b.cpi;
+                    if (sortKey==="trend-desc") return b.trend - a.trend;
+                    return 0;
+                });
+
+            const sortLabel = SORT_OPTIONS.find(s => s.key===sortKey)?.label;
+
+            return (
+                <PageShell
+                    title="Insights"
+                    subtitle="Top-performing creatives ranked by DNU"
+                    tabs={INSIGHT_TABS}
+                    activeTab={activeTab}
+                    onTab={setActiveTab}
+                    action={
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:6, background:T.bgSubtle, border:`1px solid ${T.border}`, borderRadius:8, padding:"6px 11px" }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.textMuted} strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Search…"
+                                    style={{ border:"none", outline:"none", background:"none", fontSize:12, color:T.text, width:120 }} />
+                                {keyword && <button onClick={() => setKeyword("")} style={{ background:"none", border:"none", cursor:"pointer", color:T.textMuted, fontSize:11, padding:0 }}>✕</button>}
+                            </div>
+                            <div style={{ position:"relative" }}>
+                                <button onClick={() => setSortOpen(o => !o)} style={{ display:"flex", alignItems:"center", gap:5, padding:"6px 11px", borderRadius:8, border:`1px solid ${T.border}`, background:T.bgSubtle, color:T.textSub, fontSize:12, cursor:"pointer", whiteSpace:"nowrap" }}>
+                                    {sortLabel} <span style={{ fontSize:8, opacity:0.4, transform:sortOpen?"rotate(180deg)":"none", transition:"transform 0.2s", display:"inline-block" }}>▼</span>
+                                </button>
+                                {sortOpen && (
+                                    <div style={{ position:"absolute", top:"calc(100% + 5px)", right:0, zIndex:30, background:T.surface, border:`1px solid ${T.border}`, borderRadius:9, padding:4, minWidth:110, boxShadow:`0 8px 24px rgba(0,0,0,${T.dark?0.6:0.12})` }}>
+                                        {SORT_OPTIONS.map(opt => (
+                                            <button key={opt.key} onClick={() => { setSortKey(opt.key); setSortOpen(false); }} style={{ display:"block", width:"100%", textAlign:"left", padding:"7px 11px", borderRadius:6, border:"none", background:sortKey===opt.key?T.bgSubtle:"transparent", color:sortKey===opt.key?T.text:T.textSub, fontSize:12, cursor:"pointer", fontWeight:sortKey===opt.key?500:400 }}>{opt.label}</button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ padding:"6px 11px", borderRadius:8, border:`1px solid ${T.border}`, background:T.bgSubtle, color:T.textMuted, fontSize:12, display:"flex", alignItems:"center", gap:4, cursor:"pointer", whiteSpace:"nowrap" }}>
+                                Last 30 days <span style={{ fontSize:8, opacity:0.4 }}>▼</span>
+                            </div>
+                        </div>
+                    }
+                >
+                    <div onClick={() => setSortOpen(false)}>
+                        {sorted.length===0 ? (
+                            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", paddingTop:80, gap:10, color:T.textMuted }}>
+                                <div style={{ fontSize:28, opacity:0.2 }}>◈</div>
+                                <div style={{ fontSize:13 }}>No results for "{keyword}"</div>
+                                <button onClick={() => setKeyword("")} style={{ fontSize:12, color:T.textMuted, background:"none", border:`1px solid ${T.border}`, padding:"5px 12px", borderRadius:6, cursor:"pointer", marginTop:4 }}>Clear</button>
+                            </div>
+                        ) : (
+                            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(192px, 1fr))", gap:12 }}>
+                                {sorted.map((card,idx) => {
+                                    const isVis = visible.has(card.id);
+                                    const isHov = hovered===card.id;
+                                    return (
+                                        <div key={card.id} onMouseEnter={() => setHovered(card.id)} onMouseLeave={() => setHovered(null)} style={{
+                                            background:T.surface, border:`1px solid ${isHov?T.borderHover:T.border}`,
+                                            borderRadius:14, overflow:"hidden", cursor:"pointer",
+                                            opacity:isVis?1:0, transform:isVis?"translateY(0)":"translateY(10px)",
+                                            transition:`opacity 0.28s ${idx*0.03}s, transform 0.28s ${idx*0.03}s, box-shadow 0.15s, border-color 0.15s`,
+                                            boxShadow:isHov?`0 8px 28px rgba(0,0,0,${T.dark?0.5:0.1})`:"none",
+                                        }}>
+                                            <div style={{ height:96, background:card.color, position:"relative", display:"flex", alignItems:"flex-end", padding:"0 13px 12px" }}>
+                                                <div style={{ position:"absolute", inset:0, background:"linear-gradient(145deg,rgba(255,255,255,0.1) 0%,transparent 55%)" }} />
+                                                <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top,rgba(0,0,0,0.38) 0%,transparent 55%)" }} />
+                                                <div style={{ position:"absolute", top:9, left:9, background:"rgba(0,0,0,0.3)", backdropFilter:"blur(8px)", color:"rgba(255,255,255,0.92)", fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:4, fontFamily:T.mono, letterSpacing:"0.06em" }}>
+                                                    {card.tab.includes("TTS")?"TTS":card.tab.includes("TT")?"TT":card.tab.includes("Competitor")?"COMP":"—"}
+                                                </div>
+                                                <div style={{ position:"absolute", top:9, right:9, background:"rgba(0,0,0,0.3)", backdropFilter:"blur(8px)", color:card.trend>0?"#86efac":"#fca5a5", fontSize:9, fontWeight:600, padding:"2px 6px", borderRadius:4, fontFamily:T.mono }}>
+                                                    {card.trend>0?"↑":"↓"}{Math.abs(card.trend)}%
+                                                </div>
+                                                <div style={{ position:"relative", zIndex:1 }}>
+                                                    <div style={{ fontSize:26, fontWeight:700, color:"#fff", fontFamily:T.mono, letterSpacing:"-1px", lineHeight:1 }}>{card.dnu.toFixed(0)}</div>
+                                                    <div style={{ fontSize:8, color:"rgba(255,255,255,0.55)", letterSpacing:"0.1em", textTransform:"uppercase", marginTop:2 }}>DNU</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ padding:"11px 13px 13px" }}>
+                                                <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:3, lineHeight:1.3 }}>{card.title}</div>
+                                                <div style={{ fontSize:11, color:T.textMuted, lineHeight:1.5, marginBottom:11, height:34, overflow:"hidden" }}>{card.sub}</div>
+                                                <div style={{ display:"flex", borderTop:`1px solid ${T.border}`, paddingTop:9 }}>
+                                                    {[{k:"CPI",v:`$${card.cpi.toFixed(2)}`},{k:"DNU",v:card.dnu.toFixed(1)}].map((m,mi) => (
+                                                        <div key={m.k} style={{ flex:1, paddingRight:mi===0?10:0, borderRight:mi===0?`1px solid ${T.border}`:"none", paddingLeft:mi===1?10:0 }}>
+                                                            <div style={{ fontSize:9, color:T.textFaint, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:3, fontWeight:500 }}>{m.k}</div>
+                                                            <div style={{ fontSize:13, fontWeight:600, fontFamily:T.mono, color:T.text }}>{m.v}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </PageShell>
+            );
+        }
+
+        // ─── Groot Session Home ───
+        function GrootSessionHome({ session, history, onOpenCanvas, onSelectSession, onStartGeneration }) {
+            const T = useTheme();
+            const [prompt, setPrompt] = useState("");
+            const [hovered, setHovered] = useState(null);
+            const [modeOpen, setModeOpen] = useState(false);
+            const [activeAgent, setActiveAgent] = useState("标准模式");
+            const [dataAgentActive, setDataAgentActive] = useState(false);
+            
+            // New state for Mock up selection
+            const [mockupOpen, setMockupOpen] = useState(false);
+            const [mockupSelection, setMockupSelection] = useState("");
+            const [gameplayOpen, setGameplayOpen] = useState(false);
+            const [gameplaySelection, setGameplaySelection] = useState("");
+            const [modulesOpen, setModulesOpen] = useState(false);
+            const [modulesSelection, setModulesSelection] = useState([]);
+            
+            const textareaRef = useRef(null);
+
+            const hour = new Date().getHours();
+            const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
+            // If active agent changes, reset specifics
+            useEffect(() => {
+                if (activeAgent !== "推广图Agent") setDataAgentActive(false);
+                if (activeAgent !== "商店图Agent") { setMockupOpen(false); setMockupSelection(""); }
+                if (activeAgent !== "Incentive玩法Agent") {
+                    setGameplayOpen(false); setGameplaySelection("");
+                    setModulesOpen(false); setModulesSelection([]);
+                }
+            }, [activeAgent]);
+
+            const canStart = prompt.trim() || 
+                             (activeAgent === "推广图Agent" && dataAgentActive) || 
+                             (activeAgent === "商店图Agent" && mockupSelection) ||
+                             (activeAgent === "Incentive玩法Agent" && (gameplaySelection || modulesSelection.length > 0));
+
+            return (
+                <div style={{ position:"relative", display:"flex", flexDirection:"column", height:"100vh", overflowY:"auto", background:T.pageBg }}>
+                    <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, pointerEvents:"none", zIndex:0, overflow:"hidden" }}>
+                        <div style={{ position:"absolute", top:"-15%", left:"35%", width:600, height:500, borderRadius:"50%", background: T.dark ? "radial-gradient(ellipse, rgba(120,60,180,0.12) 0%, transparent 70%)" : "radial-gradient(ellipse, rgba(150,100,220,0.07) 0%, transparent 70%)", transform:"translateX(-50%)" }} />
+                        <div style={{ position:"absolute", top:"20%", right:"-5%", width:400, height:400, borderRadius:"50%", background: T.dark ? "radial-gradient(ellipse, rgba(30,60,120,0.15) 0%, transparent 70%)" : "radial-gradient(ellipse, rgba(100,140,220,0.06) 0%, transparent 70%)" }} />
+                        <div style={{ position:"absolute", bottom:"10%", left:"5%", width:350, height:350, borderRadius:"50%", background: T.dark ? "radial-gradient(ellipse, rgba(20,80,80,0.1) 0%, transparent 70%)" : "radial-gradient(ellipse, rgba(80,160,150,0.05) 0%, transparent 70%)" }} />
+                    </div>
+
+                    <div style={{ position:"relative", zIndex:1, maxWidth:760, margin:"0 auto", width:"100%", padding:"56px 32px 80px" }}>
+                        <div style={{ marginBottom:48 }}>
+                            <h1 style={{ fontFamily:T.serif, fontSize:36, fontWeight:400, fontStyle: session ? "normal" : "italic", color:T.text, letterSpacing:"-0.5px", marginBottom:6, lineHeight:1.15 }}>
+                                {session ? session.name : greeting + "."}
+                            </h1>
+                            <p style={{ fontSize:13, color:T.textMuted, marginBottom:28 }}>
+                                {session ? `${session.nodeCount} nodes · ${session.time} · ${session.status}` : "Ready to generate your next creative?"}
+                            </p>
+                            <div style={{
+                                background: T.dark ? "rgba(255,255,255,0.03)" : T.surface,
+                                border:`1px solid ${T.border}`, borderRadius:16, 
+                                boxShadow: T.dark ? "0 0 0 1px rgba(255,255,255,0.04), 0 8px 40px rgba(0,0,0,0.5)" : "0 2px 20px rgba(0,0,0,0.06)",
+                                backdropFilter: T.dark ? "blur(12px)" : "none",
+                                transition: "all 0.3s ease",
+                            }}>
+                                <textarea
+                                    ref={textareaRef}
+                                    value={prompt}
+                                    onChange={e => setPrompt(e.target.value)}
+                                    placeholder="Give Groot a task — describe a creative direction, campaign concept, or canvas branch…"
+                                    rows={4}
+                                    style={{
+                                        width:"100%", padding:"18px 20px 10px", border:"none", outline:"none",
+                                        background:"transparent", fontSize:14, color:T.text, resize:"none",
+                                        lineHeight:1.65, fontFamily:T.sans,
+                                    }}
+                                />
+                                <div style={{ padding:"10px 14px 12px", display:"flex", alignItems:"center", justifyContent:"space-between", borderTop:`1px solid ${T.border}` }}>
+                                    <div style={{ display:"flex", alignItems:"center", gap:6, position: "relative" }}>
+                                        {/* Dropdown Container for Agent Mode */}
+                                        <div onClick={() => { setModeOpen(!modeOpen); setMockupOpen(false); setGameplayOpen(false); setModulesOpen(false); }} style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 9px", borderRadius:6, fontSize:11, border:`1px solid ${T.border}`, color:T.text, cursor:"pointer", background: modeOpen ? T.bgSubtle : "transparent", transition: "all 0.2s" }}>
+                                            <span style={{ fontSize:10 }}>{AGENT_MODES.find(m=>m.label===activeAgent)?.icon || "◇"}</span>
+                                            {activeAgent}
+                                            <span style={{ fontSize:8, opacity:0.5, transform:modeOpen?"rotate(180deg)":"none", transition:"transform 0.2s", display:"inline-block" }}>▼</span>
+                                        </div>
+
+                                        {/* Conditional Data Insights Agent Button */}
+                                        {activeAgent === "推广图Agent" && (
+                                            <div 
+                                                onClick={() => setDataAgentActive(!dataAgentActive)}
+                                                style={{ 
+                                                    display:"flex", alignItems:"center", gap:4, padding:"4px 9px", borderRadius:6, fontSize:11, 
+                                                    border:`1px solid ${dataAgentActive ? T.text : T.border}`, 
+                                                    color: dataAgentActive ? T.text : T.textSub, 
+                                                    background: dataAgentActive ? T.bgSubtle : "transparent",
+                                                    cursor:"pointer", transition: "all 0.2s" 
+                                                }}
+                                            >
+                                                <span style={{ fontSize:9, opacity: dataAgentActive ? 1 : 0.4, color: dataAgentActive ? T.purple : "inherit" }}>✦</span> 数据智荐Agent
+                                            </div>
+                                        )}
+
+                                        {/* Conditional Mock up Button for Shop Agent */}
+                                        {activeAgent === "商店图Agent" && (
+                                            <div style={{ position: "relative" }}>
+                                                <div 
+                                                    onClick={() => setMockupOpen(!mockupOpen)}
+                                                    style={{ 
+                                                        display:"flex", alignItems:"center", gap:4, padding:"4px 9px", borderRadius:6, fontSize:11, 
+                                                        border:`1px solid ${mockupSelection ? T.text : T.border}`, 
+                                                        color: mockupSelection ? T.text : T.textSub, 
+                                                        background: mockupSelection ? T.bgSubtle : "transparent",
+                                                        cursor:"pointer", transition: "all 0.2s" 
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize:9, opacity: mockupSelection ? 1 : 0.4, color: mockupSelection ? T.purple : "inherit" }}>✦</span> 
+                                                    {mockupSelection ? `Mock up: ${mockupSelection}` : "Mock up"}
+                                                </div>
+                                                
+                                                {/* Mock up Sub-dropdown */}
+                                                {mockupOpen && (
+                                                    <div style={{
+                                                        position: "absolute", bottom: "100%", left: 0, marginBottom: 8,
+                                                        background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: 4, zIndex: 60, width: 140,
+                                                        boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+                                                    }}>
+                                                        {["Lite ROW", "Lite US", "Main ROW", "Main US"].map(opt => (
+                                                            <div key={opt}
+                                                                onClick={() => { setMockupSelection(opt); setMockupOpen(false); }}
+                                                                style={{
+                                                                    padding: "6px 10px", fontSize: 11, color: T.text, cursor: "pointer", borderRadius: 4,
+                                                                    background: mockupSelection === opt ? T.bgSubtle : "transparent"
+                                                                }}
+                                                                onMouseEnter={e => e.currentTarget.style.background = T.bgSubtle}
+                                                                onMouseLeave={e => e.currentTarget.style.background = mockupSelection === opt ? T.bgSubtle : "transparent"}
+                                                            >
+                                                                {opt}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Conditional Gameplay/Modules Buttons for Incentive Agent */}
+                                        {activeAgent === "Incentive玩法Agent" && (
+                                            <React.Fragment>
+                                                <div style={{ position: "relative" }}>
+                                                    <div onClick={() => { setGameplayOpen(!gameplayOpen); setModulesOpen(false); setModeOpen(false); }}
+                                                         style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 9px", borderRadius:6, fontSize:11, border:`1px solid ${gameplaySelection ? T.text : T.border}`, color: gameplaySelection ? T.text : T.textSub, background: gameplaySelection ? T.bgSubtle : "transparent", cursor:"pointer", transition: "all 0.2s" }}>
+                                                        <span style={{ fontSize:9, opacity: gameplaySelection ? 1 : 0.4, color: gameplaySelection ? T.purple : "inherit" }}>✦</span>
+                                                        {gameplaySelection ? `玩法: ${gameplaySelection}` : "玩法选择"}
+                                                    </div>
+                                                    {gameplayOpen && (
+                                                        <div style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 8, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: 4, zIndex: 60, width: 140, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                                                            {["星星", "扫码", "百元", "冲榜"].map(opt => (
+                                                                <div key={opt} onClick={() => { setGameplaySelection(opt); setGameplayOpen(false); }}
+                                                                    style={{ padding: "6px 10px", fontSize: 11, color: T.text, cursor: "pointer", borderRadius: 4, background: gameplaySelection === opt ? T.bgSubtle : "transparent" }}
+                                                                    onMouseEnter={e => e.currentTarget.style.background = T.bgSubtle}
+                                                                    onMouseLeave={e => e.currentTarget.style.background = gameplaySelection === opt ? T.bgSubtle : "transparent"}>
+                                                                    {opt}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                <div style={{ position: "relative" }}>
+                                                    <div onClick={() => { setModulesOpen(!modulesOpen); setGameplayOpen(false); setModeOpen(false); }}
+                                                         style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 9px", borderRadius:6, fontSize:11, border:`1px solid ${modulesSelection.length ? T.text : T.border}`, color: modulesSelection.length ? T.text : T.textSub, background: modulesSelection.length ? T.bgSubtle : "transparent", cursor:"pointer", transition: "all 0.2s" }}>
+                                                        <span style={{ fontSize:9, opacity: modulesSelection.length ? 1 : 0.4, color: modulesSelection.length ? T.purple : "inherit" }}>✦</span>
+                                                        {modulesSelection.length ? `模块: ${modulesSelection.length} 项` : "模块选择"}
+                                                    </div>
+                                                    {modulesOpen && (
+                                                        <div style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 8, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: 4, zIndex: 60, width: 160, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                                                            {["Feed banner", "成功状态", "失败状态", "顶Tab", "回流页", "活动结束"].map(opt => {
+                                                                const isSelected = modulesSelection.includes(opt);
+                                                                return (
+                                                                    <div key={opt} onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (isSelected) setModulesSelection(modulesSelection.filter(x => x !== opt));
+                                                                        else setModulesSelection([...modulesSelection, opt]);
+                                                                    }}
+                                                                    style={{ padding: "6px 10px", fontSize: 11, color: T.text, cursor: "pointer", borderRadius: 4, display: "flex", justifyContent: "space-between" }}
+                                                                    onMouseEnter={e => e.currentTarget.style.background = T.bgSubtle}
+                                                                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                                                        {opt}
+                                                                        {isSelected && <span style={{ color: T.purple }}>✓</span>}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </React.Fragment>
+                                        )}
+
+                                        <div style={{ width:1, height:14, background:T.border, margin: "0 4px" }} />
+                                        
+                                        {/* Upload Attachment Button with Hover Tooltip */}
+                                        <div className="relative tooltip-group" style={{ display: "flex", position: "relative" }}>
+                                            <button style={{ padding:"4px 8px", borderRadius:6, border:`1px solid ${T.border}`, background:"transparent", color:T.textMuted, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition: "all 0.2s" }}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                            </button>
+                                            <div style={{ position:"absolute", bottom:"100%", left:"50%", transform:"translateX(-50%)", marginBottom:"8px", padding:"6px 10px", background: T.dark ? "#2a2a2a" : "#1a1a1a", color: "#fff", fontSize: 11, border: `1px solid ${T.dark ? "#3a3a3a" : "#2a2a2a"}`, borderRadius:"6px", whiteSpace:"nowrap", opacity:0, pointerEvents:"none", transition:"opacity 0.2s", zIndex:50 }}
+                                                 className="tooltip-box"
+                                            >
+                                                可上传图片/视频/PRD/代码/文件
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            if (canStart) {
+                                                onStartGeneration(prompt, activeAgent, dataAgentActive, mockupSelection, gameplaySelection, modulesSelection);
+                                            }
+                                        }}
+                                        style={{
+                                            display:"flex", alignItems:"center", gap:6, padding:"7px 16px", borderRadius:8, border:"none",
+                                            background: canStart ? T.accentBg : T.bgSubtle,
+                                            color: canStart ? T.accentFg : T.textFaint,
+                                            fontSize:12, fontWeight:500, cursor: canStart ? "pointer" : "default", transition:"all 0.15s",
+                                        }}>
+                                        Start ↵
+                                    </button>
+                                </div>
+
+                                {/* Expandable Mode Panel (Normal Flow for Push-Down Effect) */}
+                                <div style={{
+                                    maxHeight: modeOpen ? 600 : 0,
+                                    opacity: modeOpen ? 1 : 0,
+                                    overflow: "hidden",
+                                    transition: "max-height 0.4s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s ease",
+                                    background: T.dark ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.02)",
+                                }}>
+                                    <div style={{
+                                        borderTop: `1px solid ${T.border}`,
+                                        padding: 16,
+                                        display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12,
+                                    }}>
+                                        {AGENT_MODES.map(opt => (
+                                            <div key={opt.id} onClick={() => { setActiveAgent(opt.label); setModeOpen(false); }} style={{
+                                                padding: 12, borderRadius: 8, border: `1px solid ${activeAgent === opt.label ? T.borderHover : T.border}`,
+                                                background: activeAgent === opt.label ? T.bgSubtle : "transparent",
+                                                cursor: "pointer", transition: "all 0.15s",
+                                                display: "flex", flexDirection: "column"
+                                            }}>
+                                                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}>
+                                                    <span style={{ fontSize:12, color: T.textMuted }}>{opt.icon}</span>
+                                                    <span style={{ fontSize:12, fontWeight:600, color: T.text }}>{opt.label}</span>
+                                                    {activeAgent === opt.label && <span style={{ marginLeft:"auto", color: T.text, fontSize:10 }}>✓</span>}
+                                                </div>
+                                                <div style={{ fontSize:10, color: T.textMuted, marginBottom: 12, lineHeight: 1.4, flex: 1 }}>{opt.desc}</div>
+                                                <div style={{ width: "100%", height: 70, background: T.dark ? "rgba(255,255,255,0.03)" : "#f0f0f0", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: `1px solid ${T.border}` }}>
+                                                    <span style={{ fontSize: 10, color: T.textFaint }}></span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ marginBottom:48 }}>
+                            <div style={{ marginBottom:16 }}>
+                                <h2 style={{ fontFamily:T.serif, fontSize:20, fontWeight:400, color:T.text, letterSpacing:"-0.2px", marginBottom:3 }}>Groot Growth</h2>
+                                <p style={{ fontSize:11, color:T.textFaint }}>Explore top-performing creatives generated by the team</p>
+                            </div>
+                            <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gridAutoRows:"140px", gap:12 }}>
+                                {GROOT_GROWTH_MOCK.map(item => {
+                                    const isHov = hovered === item.id;
+                                    return (
+                                        <div key={item.id}
+                                            onMouseEnter={() => setHovered(item.id)}
+                                            onMouseLeave={() => setHovered(null)}
+                                            style={{
+                                                gridColumn: `span ${item.colSpan}`,
+                                                gridRow: `span ${item.rowSpan}`,
+                                                borderRadius:12, overflow:"hidden",
+                                                border:`1px solid ${isHov ? T.borderHover : T.border}`,
+                                                background: T.dark ? "rgba(255,255,255,0.025)" : T.surface,
+                                                boxShadow: isHov ? `0 8px 28px rgba(0,0,0,${T.dark?0.5:0.09})` : "none",
+                                                transition:"all 0.15s", cursor:"pointer",
+                                                position: "relative",
+                                            }}
+                                        >
+                                            <div style={{ position:"absolute", inset:0, background: item.color, opacity: 0.8 }} />
+                                            <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 30% 30%, rgba(255,255,255,0.07) 0%, transparent 70%)" }} />
+                                            <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%)" }} />
+                                            <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%, -50%)", fontSize:12, color:"rgba(255,255,255,0.3)" }}></div>
+                                            <div style={{ position:"absolute", bottom:12, left:12, right:12 }}>
+                                                <div style={{ fontSize:13, fontWeight:600, color:"#fff", marginBottom:2 }}>{item.label}</div>
+                                                <div style={{ fontSize:10, color:"rgba(255,255,255,0.6)" }}>By {item.author}</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            
+                            {/* Pagination */}
+                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 24 }}>
+                                {["<", "1", "2", "3", "4", ">"].map((page, idx) => (
+                                    <button key={idx} style={{
+                                        width: 28, height: 28, borderRadius: 6,
+                                        border: `1px solid ${T.border}`,
+                                        background: page === "1" ? (T.dark ? "rgba(255,255,255,0.1)" : T.bgSubtle) : "transparent",
+                                        color: page === "1" ? T.text : T.textMuted,
+                                        fontSize: 12, cursor: "pointer",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        transition: "all 0.15s"
+                                    }}>
+                                        {page}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", marginBottom:16 }}>
+                                <div>
+                                    <h2 style={{ fontFamily:T.serif, fontSize:20, fontWeight:400, color:T.text, letterSpacing:"-0.2px", marginBottom:3 }}>
+                                        My project
+                                    </h2>
+                                    <p style={{ fontSize:11, color:T.textFaint }}>
+                                        {session ? `${session.nodeCount} nodes in this session` : "Your canvas history"}
+                                    </p>
+                                </div>
+                                {session && (
+                                    <button onClick={() => onOpenCanvas(session.id)} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:8, border:"none", background:T.accentBg, color:T.accentFg, fontSize:12, fontWeight:500, cursor:"pointer" }}>
+                                        ⬡ Open Canvas
+                                    </button>
+                                )}
+                            </div>
+
+                            <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:10 }}>
+                                {(session ? [session] : history).slice(0, session ? 1 : 6).map((g, i) => {
+                                    const swatches = GALLERY[g.id] || [];
+                                    const isHov = hovered === g.id + "_r_" + i;
+                                    return (
+                                        <div key={g.id + i}
+                                            onMouseEnter={() => setHovered(g.id + "_r_" + i)}
+                                            onMouseLeave={() => setHovered(null)}
+                                            onClick={() => session ? onOpenCanvas(g.id) : onSelectSession(g.id)}
+                                            style={{
+                                                background: T.dark ? "rgba(255,255,255,0.025)" : T.surface,
+                                                border:`1px solid ${isHov?T.borderHover:T.border}`,
+                                                borderRadius:12, overflow:"hidden", cursor:"pointer",
+                                                boxShadow:isHov?`0 6px 24px rgba(0,0,0,${T.dark?0.45:0.07})`:"none",
+                                                backdropFilter: T.dark ? "blur(8px)" : "none",
+                                                transition:"all 0.15s",
+                                            }}>
+                                            <div style={{ height:90, display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:1.5, padding:1.5, background:T.bgSubtle }}>
+                                                {swatches.slice(0,6).map((c,ci) => <div key={ci} style={{ borderRadius:3, background:c, opacity:T.dark?0.8:0.9 }} />)}
+                                                {swatches.length===0 && <div style={{ gridColumn:"1/-1", display:"flex", alignItems:"center", justifyContent:"center", color:T.textFaint, fontSize:18 }}>⬡</div>}
+                                            </div>
+                                            <div style={{ padding:"10px 12px 12px" }}>
+                                                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
+                                                    <StatusDot status={g.status} />
+                                                    <span style={{ fontSize:12, fontWeight:500, color:T.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{g.name}</span>
+                                                </div>
+                                                <div style={{ fontSize:10, color:T.textMuted }}>{g.time} · {g.nodeCount} nodes</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {!session && (
+                                    <div onClick={() => onSelectSession(null)}
+                                        style={{
+                                            background:"transparent", border:`1px dashed ${T.border}`,
+                                            borderRadius:12, display:"flex", flexDirection:"column",
+                                            alignItems:"center", justifyContent:"center", minHeight:135,
+                                            gap:7, color:T.textFaint, cursor:"pointer", transition:"all 0.15s",
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.borderColor=T.borderHover; e.currentTarget.style.color=T.textMuted; }}
+                                        onMouseLeave={e => { e.currentTarget.style.borderColor=T.border; e.currentTarget.style.color=T.textFaint; }}
+                                    >
+                                        <span style={{ fontSize:20 }}>+</span>
+                                        <span style={{ fontSize:11 }}>New canvas</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── Universal Canvas Toolbar Component ───
+        const ToolbarIconBtn = ({ icon, label }) => {
+            const T = useTheme();
+            return (
+                <div className="relative tooltip-group" style={{ display:"flex" }}>
+                    <button style={{ padding:"6px 10px", borderRadius:7, border:"none", background:"transparent", color:T.textMuted, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background=T.bgSubtle} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                        {icon}
+                    </button>
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 opacity-0 transition-opacity whitespace-nowrap pointer-events-none z-50 rounded-md shadow-xl tooltip-box" style={{ background: T.dark ? "#2a2a2a" : "#1a1a1a", color: "#fff", fontSize: 11, border: `1px solid ${T.dark ? "#3a3a3a" : "#2a2a2a"}` }}>
+                        {label}
+                    </div>
+                </div>
+            );
+        };
+
+        const UniversalCanvasToolbar = ({ title, onBack }) => {
+            const T = useTheme();
+            return (
+                <div style={{ position:"absolute", top:16, left:16, right:16, display:"flex", justifyContent:"space-between", alignItems:"center", zIndex:10, pointerEvents:"none" }}>
+                    {/* Left: Back and Title */}
+                    <div style={{ display:"flex", alignItems:"center", gap:2, background:T.surface, border:`1px solid ${T.border}`, borderRadius:10, padding:"5px 7px", pointerEvents:"auto", boxShadow:`0 2px 12px rgba(0,0,0,${T.dark?0.4:0.06})` }}>
+                        <button onClick={onBack} style={{ padding:"5px 10px", borderRadius:7, border:"none", background:"transparent", color:T.textMuted, fontSize:12, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+                            ← <span style={{ fontSize:11 }}>Home</span>
+                        </button>
+                        <div style={{ width:1, height:20, background:T.border, margin:"0 2px" }} />
+                        <div style={{ padding:"5px 11px", fontSize:12, color:T.textSub, whiteSpace:"nowrap" }}>⬡ {title || "Canvas"}</div>
+                    </div>
+
+                    {/* Center: Interactive Editing Icons */}
+                    <div style={{ display:"flex", alignItems:"center", gap:2, background:T.surface, border:`1px solid ${T.border}`, borderRadius:10, padding:"4px 6px", pointerEvents:"auto", boxShadow:`0 2px 12px rgba(0,0,0,${T.dark?0.4:0.06})` }}>
+                        <ToolbarIconBtn label="文本" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>} />
+                        <ToolbarIconBtn label="素材库" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>} />
+                        <ToolbarIconBtn label="图形" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>} />
+                        <ToolbarIconBtn label="画笔" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>} />
+                        <div style={{ width:1, height:16, background:T.border, margin:"0 4px" }} />
+                        <ToolbarIconBtn label="分享给他人协作" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>} />
+                        <ToolbarIconBtn label="导入Figma" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z"/><path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z"/><path d="M12 12.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 1 1-7 0z"/><path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z"/><path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z"/></svg>} />
+                    </div>
+
+                    {/* Right: Generate Button */}
+                    <div style={{ display:"flex", alignItems:"center", pointerEvents:"auto" }}>
+                        <button style={{ padding:"6px 14px", borderRadius:7, border:"none", background:T.accentBg, color:T.accentFg, fontSize:11, fontWeight:500, cursor:"pointer" }}>▶ Generate</button>
+                    </div>
+                </div>
+            );
+        };
+
+        // ─── Groot Canvas ───
+        function GrootCanvas({ historyId, historyItem, onBack, isAgentChatOpen, setIsAgentChatOpen }) {
+            const T = useTheme();
+            
+            // Interactive nodes state mapping
+            const [canvasNodes, setCanvasNodes] = useState(() => makeNodes(historyId));
+            const [canvasEdges, setCanvasEdges] = useState(() => EDGES[historyId] || []);
+            const [selectedNode, setSelectedNode] = useState(null);
+
+            // -- Canvas Pan & Zoom State --
+            const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+            const [isPanning, setIsPanning] = useState(false);
+            const [isSpaceDown, setIsSpaceDown] = useState(false);
+            const canvasRef = useRef(null);
+            const panStart = useRef({ x: 0, y: 0 });
+
+            // -- Node Drag State --
+            const [positions, setPositions] = useState(() => Object.fromEntries(canvasNodes.map(n => [n.id, {x:n.x, y:n.y}])));
+            const [dragging, setDragging] = useState(null);
+            const dragOffset = useRef({});
+            
+            // Environment modes
+            const isPromoDataAgent = historyId === "promo_data_agent";
+            const isShopMockupAgent = historyId === "shop_mockup_agent";
+            const isIncentiveAgent = historyId === "incentive_agent_canvas";
+            const isStandard = !isPromoDataAgent && !isShopMockupAgent && !isIncentiveAgent;
+            
+            const [reference, setReference] = useState(null);
+            const [chatInput, setChatInput] = useState("");
+            
+            // Sync specific canvas properties
+            const [activeAgent, setActiveAgent] = useState(() => {
+                if (isPromoDataAgent) return "推广图Agent";
+                if (isShopMockupAgent) return "商店图Agent";
+                if (isIncentiveAgent) return "Incentive玩法Agent";
+                return "标准模式";
+            });
+            const [dataAgentActive, setDataAgentActive] = useState(isPromoDataAgent);
+            const [mockupOpen, setMockupOpen] = useState(false);
+            const [mockupSelection, setMockupSelection] = useState(isShopMockupAgent ? "Main ROW" : "");
+            const [gameplayOpen, setGameplayOpen] = useState(false);
+            const [gameplaySelection, setGameplaySelection] = useState(isIncentiveAgent ? "冲榜" : "");
+            const [modulesOpen, setModulesOpen] = useState(false);
+            const [modulesSelection, setModulesSelection] = useState(isIncentiveAgent ? ["Feed banner"] : []);
+            const [modeOpen, setModeOpen] = useState(false);
+
+            // ── Gemini Chat State ──
+            const [chatHistory, setChatHistory] = useState(() => {
+                if (isPromoDataAgent) {
+                    return [{ role: 'assistant', text: '已为您应用 **Top-DNU 数据智荐** 策略。\n\n分析近期高转化素材发现，使用高对比度色彩和放大产品特写能提升 **15%** 的点击率。已在左侧画布中为您提取符合该策略的视觉特征，您可以直接点击左侧图片引用为生成参考。' }];
+                } else if (isShopMockupAgent) {
+                    return [{ role: 'assistant', text: '已为您应用 **商店图 Agent** 策略。\n\n根据所选的 Mock up 布局，已生成 4 张 9:16 竖版矩阵预览图。您可以悬停在图片上使用快捷编辑工具，或直接向我发送修改指令。' }];
+                } else if (isIncentiveAgent) {
+                    return [{ role: 'assistant', text: '已为您应用 **Incentive 玩法 Agent** 策略。\n\n根据您选择的玩法和模块，已在画布中生成 10 张正方形（1:1）素材。您可以直接点击每张图下方的 Prompt 进行单独的修改并重新生成。' }];
+                } else {
+                    return [{ role: 'assistant', text: '你好！我是 GIGA Agent。需要对当前画布中的节点或排版做些什么调整吗？' }];
+                }
+            });
+            const [isGenerating, setIsGenerating] = useState(false);
+            const chatEndRef = useRef(null);
+
+            const selNode = canvasNodes.find(n => n.id===selectedNode);
+
+            // Spacebar detection for panning
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.code === 'Space' && !isSpaceDown && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                        e.preventDefault();
+                        setIsSpaceDown(true);
+                    }
+                };
+                const handleKeyUp = (e) => {
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        setIsSpaceDown(false);
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                window.addEventListener('keyup', handleKeyUp);
+                return () => {
+                    window.removeEventListener('keydown', handleKeyDown);
+                    window.removeEventListener('keyup', handleKeyUp);
+                }
+            }, [isSpaceDown]);
+
+            // Mouse Wheel for Zoom/Pan
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const handleWheel = (e) => {
+                    e.preventDefault();
+                    if (e.ctrlKey || e.metaKey) {
+                        const scaleBy = Math.exp(-e.deltaY / 200);
+                        setTransform(prev => {
+                            let newScale = prev.scale * scaleBy;
+                            newScale = Math.min(Math.max(0.05, newScale), 5);
+                            const rect = canvas.getBoundingClientRect();
+                            const mx = e.clientX - rect.left;
+                            const my = e.clientY - rect.top;
+                            const newX = mx - (mx - prev.x) / prev.scale * newScale;
+                            const newY = my - (my - prev.y) / prev.scale * newScale;
+                            return { x: newX, y: newY, scale: newScale };
+                        });
+                    } else {
+                        setTransform(prev => ({
+                            ...prev,
+                            x: prev.x - e.deltaX,
+                            y: prev.y - e.deltaY
+                        }));
+                    }
+                };
+                canvas.addEventListener('wheel', handleWheel, { passive: false });
+                return () => canvas.removeEventListener('wheel', handleWheel);
+            }, [isStandard, isShopMockupAgent, isIncentiveAgent, isPromoDataAgent]);
+
+            // Initial centering
+            useEffect(() => {
+                if (isShopMockupAgent) {
+                    setTransform({ x: 50, y: 100, scale: 0.8 });
+                } else if (isIncentiveAgent) {
+                    setTransform({ x: 50, y: 50, scale: 0.85 });
+                } else if (isPromoDataAgent) {
+                    setTransform({ x: 0, y: 0, scale: 1 });
+                } else {
+                    setTransform({ x: 0, y: 0, scale: 1 });
+                }
+            }, [historyId]);
+
+            // Mouse events for Canvas Pan & Node Drag
+            const onCanvasMouseDown = useCallback((e) => {
+                if (e.button === 0 || e.button === 1 || isSpaceDown) {
+                    setIsPanning(true);
+                    panStart.current = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+                    setSelectedNode(null);
+                }
+            }, [transform, isSpaceDown]);
+
+            const onNodeMouseDown = useCallback((e, nodeId) => {
+                e.stopPropagation(); 
+                const pos = positions[nodeId];
+                const nodeScreenX = transform.x + pos.x * transform.scale;
+                const nodeScreenY = transform.y + pos.y * transform.scale;
+                dragOffset.current = { dx: e.clientX - nodeScreenX, dy: e.clientY - nodeScreenY };
+                setDragging(nodeId);
+                setSelectedNode(nodeId);
+            }, [positions, transform]);
+
+            useEffect(() => {
+                const onMove = (e) => {
+                    if (dragging) {
+                        setPositions(p => ({
+                            ...p,
+                            [dragging]: {
+                                x: (e.clientX - dragOffset.current.dx - transform.x) / transform.scale,
+                                y: (e.clientY - dragOffset.current.dy - transform.y) / transform.scale
+                            }
+                        }));
+                    } else if (isPanning) {
+                        setTransform(prev => ({
+                            ...prev,
+                            x: e.clientX - panStart.current.x,
+                            y: e.clientY - panStart.current.y
+                        }));
+                    }
+                };
+                const onUp = () => {
+                    setDragging(null);
+                    setIsPanning(false);
+                };
+                window.addEventListener("mousemove", onMove);
+                window.addEventListener("mouseup", onUp);
+                return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+            }, [dragging, isPanning, transform]);
+
+            // Scroll Chat to bottom
+            useEffect(() => {
+                chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, [chatHistory, isGenerating, isAgentChatOpen]);
+
+            const handleRecClick = (item) => {
+                setReference(item);
+                if (!isAgentChatOpen) setIsAgentChatOpen(true);
+                setChatInput(`参考该图策略：${item.prompt}`);
+            };
+
+            const handleSendMessage = async () => {
+                if (!chatInput.trim() && !reference) return;
+
+                const userText = chatInput;
+                const refText = reference ? `\n[附带参考策略]：${reference.prompt} (洞察: ${reference.insight})` : "";
+                const fullPrompt = userText + refText;
+
+                const newUserMsg = { role: 'user', text: userText, reference: reference };
+                setChatHistory(prev => [...prev, newUserMsg]);
+                setChatInput("");
+                setReference(null);
+                setIsGenerating(true);
+
+                const responseText = await generateWithGemini(`User Request: ${fullPrompt}`);
+
+                setChatHistory(prev => [...prev, { role: 'assistant', text: responseText }]);
+                setIsGenerating(false);
+            };
+
+            const handleCopyrightVerify = () => {
+                const newUserMsg = { role: 'user', text: "对当前选中的商店图进行版权验证。" };
+                setChatHistory(prev => [...prev, newUserMsg]);
+                setIsGenerating(true);
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, { role: 'assistant', text: "已为您启动版权风险分析。正在通过 AI 检索并比对图中元素的商用授权情况...\n\n✅ 🛡️ **验证通过**：暂未发现明显的字体、人物肖像或设计素材侵权风险，可安全用于商业投放。" }]);
+                    setIsGenerating(false);
+                }, 1500);
+            };
+
+            // Pull out new node logic
+            const spawnChildNode = (parentId) => {
+                const parentPos = positions[parentId];
+                const parentNode = canvasNodes.find(n => n.id === parentId);
+                const newId = 'n_' + Date.now();
+                const newNode = {
+                    id: newId,
+                    label: "Edit Variation",
+                    type: "edit",
+                    width: 240,
+                    imgHeight: 180,
+                    color: parentNode.color || T.bgSubtle,
+                    prompt: parentNode.prompt || ""
+                };
+                setCanvasNodes(prev => [...prev, newNode]);
+                setPositions(prev => ({...prev, [newId]: { x: parentPos.x + (parentNode.width||180) + 60, y: parentPos.y }}));
+                setCanvasEdges(prev => [...prev, [parentId, newId]]);
+                setSelectedNode(newId);
+            };
+
+            // Incentive Prompt Editing Logic
+            const handlePromptEditToggle = (id) => {
+                setCanvasNodes(prev => prev.map(img => img.id === id ? { ...img, isEditing: true } : img));
+            };
+
+            const handlePromptSubmit = (id, newPrompt) => {
+                setCanvasNodes(prev => prev.map(img => img.id === id ? { ...img, prompt: newPrompt, isEditing: false, isLoading: true } : img));
+                setTimeout(() => {
+                    setCanvasNodes(prev => prev.map(img => img.id === id ? { ...img, isLoading: false, color: "#" + Math.floor(Math.random()*16777215).toString(16) } : img));
+                }, 1500); 
+            };
+
+            const rightPanelWidth = isAgentChatOpen ? 340 : (isStandard ? 256 : 0);
+
+            return (
+                <div style={{ display:"flex", height:"100vh", fontFamily:T.sans }}>
+                    
+                    {/* LEFT / CENTER: Dynamic Canvas Area */}
+                    <div style={{ flex: 1, position: "relative", overflow: "hidden", backgroundColor: T.pageBg }}>
+                        
+                        {/* Universal Top Toolbar */}
+                        <UniversalCanvasToolbar title={historyItem?.name} onBack={onBack} />
+
+                        {/* Interactive Zoom/Pan Wrapper for Standard, Promo Data Agent, Shop Mockup & Incentive */}
+                        {(isStandard || isPromoDataAgent || isShopMockupAgent || isIncentiveAgent) && (
+                            <div
+                                ref={canvasRef}
+                                onMouseDown={onCanvasMouseDown}
+                                style={{ position: "absolute", inset: 0, cursor: isPanning ? "grabbing" : (isSpaceDown ? "grab" : "default"), overflow: "hidden" }}
+                            >
+                                {/* Background Pattern */}
+                                <div style={{
+                                    position: "absolute", inset: 0,
+                                    backgroundImage:`radial-gradient(circle, ${T.canvasDot} 1px, transparent 1px)`,
+                                    backgroundSize:`${24 * transform.scale}px ${24 * transform.scale}px`,
+                                    backgroundPosition: `${transform.x}px ${transform.y}px`,
+                                    backgroundColor: T.dark ? "#080810" : T.canvasBg,
+                                    backgroundBlendMode: T.dark ? "screen" : "normal",
+                                    pointerEvents: "none"
+                                }} />
+
+                                {/* Transform Container */}
+                                <div style={{
+                                    position: "absolute", top: 0, left: 0,
+                                    transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+                                    transformOrigin: "0 0",
+                                    width: "100%", height: "100%"
+                                }}>
+                                    <svg style={{ position:"absolute", top:0, left:0, overflow:"visible", pointerEvents:"none" }}>
+                                        {canvasEdges.map(([from,to],i) => {
+                                            const a=positions[from], b=positions[to];
+                                            if (!a||!b) return null;
+                                            const aNode = canvasNodes.find(n => n.id === from);
+                                            const ax=a.x + (aNode?.width || 180), ay=a.y + (aNode?.imgHeight ? aNode.imgHeight/2 : 28);
+                                            const bx=b.x, by=b.y + (aNode?.imgHeight ? aNode.imgHeight/2 : 28);
+                                            const cx=(ax+bx)/2;
+                                            return <path key={i} d={`M ${ax} ${ay} C ${cx} ${ay}, ${cx} ${by}, ${bx} ${by}`} fill="none" stroke={T.borderHover} strokeWidth="2" />;
+                                        })}
+                                    </svg>
+                                    
+                                    {isShopMockupAgent && (
+                                        <div style={{ display: "flex", gap: 60, padding: "120px 100px", alignItems: "center" }}>
+                                            {[1, 2, 3, 4].map(idx => (
+                                                <div key={idx} className="group" style={{
+                                                    width: 320, height: 568, position: "relative", borderRadius: 16,
+                                                    overflow: "hidden", border: `1px solid ${T.border}`,
+                                                    background: T.surfaceHover, boxShadow: `0 12px 32px rgba(0,0,0,${T.dark?0.5:0.1})`
+                                                }}>
+                                                    <div style={{ position: "absolute", inset: 0, background: T.dark ? "#161620" : "#e0e7ff", display: "flex", alignItems: "center", justifyContent: "center", color: T.textMuted, fontSize: 13, flexDirection: "column", gap: 10 }}>
+                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                                                                                            </div>
+                                                    {/* Hover Menu */}
+                                                    <div className="absolute top-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 flex flex-wrap justify-center gap-1.5 bg-black/80 backdrop-blur-md px-2.5 py-2 rounded-xl border border-white/10" style={{ width: "90%", boxShadow: "0 4px 12px rgba(0,0,0,0.5)" }}>
+                                                        {["HD", "文字编辑", "图层分离", "控制角度", "精准修改", "视频生成"].map(tool => (
+                                                            <button key={tool} style={{ padding: "4px 8px", fontSize: 10, color: "#fff", background: "transparent", border: "none", cursor: "pointer", borderRadius: 6, whiteSpace: "nowrap", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.2)"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+                                                                {tool}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", width: 40, height: 4, background: "rgba(255,255,255,0.2)", borderRadius: 4, pointerEvents: "none" }} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Standard / Promo / Incentive nodes mapped */}
+                                    {(isStandard || isPromoDataAgent || isIncentiveAgent) && canvasNodes.map(node => {
+                                        const pos = positions[node.id];
+                                        const isSel = selectedNode===node.id;
+                                        const width = node.width || 180;
+                                        const imgHeight = node.imgHeight || 90;
+                                        const isEditType = node.type === "edit";
+
+                                        return (
+                                            <div
+                                                key={node.id}
+                                                className="group"
+                                                onMouseDown={e => onNodeMouseDown(e, node.id)}
+                                                onDoubleClick={() => {
+                                                    if (isPromoDataAgent && (node.type === "promo_rec" || node.type === "edit")) {
+                                                        handleRecClick({ color: node.color, prompt: node.prompt || "", insight: node.insight || "" });
+                                                    }
+                                                }}
+                                                style={{
+                                                position:"absolute", left:pos.x, top:pos.y, width:width,
+                                                background:T.surface, border:`1.5px solid ${isSel?T.text:T.border}`,
+                                                borderRadius:12, overflow:"visible",
+                                                cursor:dragging===node.id?"grabbing":"grab",
+                                                boxShadow:isSel?`0 0 0 3px rgba(${T.dark?"240,239,240":"28,25,23"},0.1),0 4px 16px rgba(0,0,0,${T.dark?0.5:0.1})`:`0 2px 8px rgba(0,0,0,${T.dark?0.35:0.06})`,
+                                                transition:dragging===node.id?"none":"border-color 0.15s,box-shadow 0.15s",
+                                                userSelect:"none",
+                                            }}>
+                                                <div style={{ height:imgHeight, background:node.color||T.bgSubtle, position:"relative", borderRadius:"11px 11px 0 0", overflow:"hidden" }}>
+                                                    {node.isLoading && <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",color:"white"}}><span className="animate-spin text-2xl">✨</span></div>}
+                                                    {!node.isLoading && (
+                                                        <React.Fragment>
+                                                            <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 40% 40%,rgba(255,255,255,0.18),transparent 70%)" }} />
+                                                            {node.type==="root" && <div style={{ position:"absolute", top:6, left:6, background:"rgba(0,0,0,0.25)", backdropFilter:"blur(6px)", color:"rgba(255,255,255,0.9)", fontSize:9, fontWeight:600, padding:"2px 6px", borderRadius:4, fontFamily:T.mono }}>ROOT</div>}
+                                                            {!!node.insight && (
+                                                                <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 10, padding: "3px 7px", borderRadius: 6, backdropFilter: "blur(4px)" }}>
+                                                                    {node.insight}
+                                                                </div>
+                                                            )}
+                                                            {node.type==="square" && <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.4)",fontSize:12}}></div>}
+                                                            {node.type==="edit" && <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.4)",fontSize:12}}></div>}
+                                                        </React.Fragment>
+                                                    )}
+                                                </div>
+
+                                                <div style={{ padding:"8px 10px 10px", background: T.surface, borderRadius:"0 0 11px 11px" }}>
+                                                    {!isEditType && node.prompt ? (
+                                                        <div style={{ background: T.surface, border: `1px solid ${T.borderHover}`, borderRadius: 8, padding: 12 }}>
+                                                            {node.isEditing ? (
+                                                                <textarea
+                                                                    autoFocus
+                                                                    defaultValue={node.prompt}
+                                                                    onBlur={(e) => handlePromptSubmit(node.id, e.target.value)}
+                                                                    onKeyDown={(e) => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); handlePromptSubmit(node.id, e.target.value); } }}
+                                                                    style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: T.text, fontSize: 11, resize: "none", lineHeight: 1.5 }}
+                                                                    rows={3}
+                                                                />
+                                                            ) : (
+                                                                <div onClick={(e) => { e.stopPropagation(); handlePromptEditToggle(node.id); }} style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.5, cursor: "text" }}>
+                                                                    {node.prompt}
+                                                                    <div style={{ color: T.purple, fontSize: 10, marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                                                                        <span>✎ 点击修改 Prompt</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : isEditType ? (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                            <div style={{ display: 'flex', gap: 6, padding: '4px 0' }}>
+                                                                <div style={{ width: 24, height: 24, background: '#f59e0b', borderRadius: 4 }}></div>
+                                                                <div style={{ width: 24, height: 24, border: `1px dashed ${T.borderHover}`, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMuted }}>+</div>
+                                                            </div>
+                                                            <textarea
+                                                                defaultValue={node.prompt}
+                                                                onBlur={(e) => handlePromptSubmit(node.id, e.target.value)}
+                                                                onKeyDown={(e) => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); handlePromptSubmit(node.id, e.target.value); } }}
+                                                                placeholder="Create with your ideas..."
+                                                                style={{ width: "100%", background: "transparent", border: `1px solid ${T.border}`, borderRadius: 6, padding: 6, outline: "none", color: T.text, fontSize: 11, resize: "none", lineHeight: 1.5 }}
+                                                                rows={3}
+                                                            />
+                                                            <button onClick={() => handlePromptSubmit(node.id, node.prompt)} style={{ width: "100%", height: 26, borderRadius: 6, background: T.text, color: T.bg, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 11, fontWeight: 500 }}>↑ Generate</button>
+                                                        </div>
+                                                    ) : (
+                                                        <React.Fragment>
+                                                            <div style={{ fontSize:11, fontWeight:500, color:T.text }}>{node.label}</div>
+                                                            <div style={{ fontSize:9, color:T.textMuted, marginTop:2, fontFamily:T.mono }}>{node.type} · {node.width===240?"1:1":"9:16"}</div>
+                                                        </React.Fragment>
+                                                    )}
+                                                </div>
+
+                                                {/* Add Branch Handle */}
+                                                <div 
+                                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={(e) => { e.stopPropagation(); spawnChildNode(node.id); }} 
+                                                    style={{ position: 'absolute', right: -12, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24, background: T.surface, border: `1px solid ${T.borderHover}`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 20, fontSize: 16, color: T.text, boxShadow: `0 2px 8px rgba(0,0,0,0.5)` }}
+                                                >
+                                                    +
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Promo Data Agent Overlay Intro (not scaled) */}
+                                {isPromoDataAgent && (
+                                    <div style={{ position: "absolute", top: 76, left: 32, right: 32, pointerEvents: "none" }}>
+                                        <div style={{ maxWidth: 980 }}>
+                                            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16 }}>
+                                                <div>
+                                                    <div style={{ fontSize: 26, fontFamily: T.serif, color: T.text, marginBottom: 8 }}>推广图策略推荐 (Data-Driven Promos)</div>
+                                                    <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.6, maxWidth: 900 }}>
+                                                        基于 <b style={{ color: T.purple }}>Top-DNU 数据智荐</b> 策略，系统为您检索了近期表现最佳的过往创意，并提取了核心视觉特征与 Prompt。<b>双击</b>任意节点可将策略引用至右侧对话框；每张图右侧的 <b>+</b> 可链接出新的节点分支。
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Floating Toggle Button (visible if Right Panel is fully collapsed) */}
+                        {!isAgentChatOpen && rightPanelWidth === 0 && (
+                            <button onClick={() => setIsAgentChatOpen(true)} style={{ position:"absolute", right:24, bottom:24, width:48, height:48, borderRadius:"50%", background:T.surface, color:T.text, border:`1px solid ${T.borderHover}`, cursor:"pointer", boxShadow:"0 8px 24px rgba(0,0,0,0.2)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:20, transition:"transform 0.2s" }} onMouseEnter={e=>e.currentTarget.style.transform="scale(1.05)"} onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
+                                <span style={{ fontSize: 18 }}>✨</span>
+                            </button>
+                        )}
+                    </div>
+
+                    {/* RIGHT PANEL: Drawer Logic handling both Chat and Node Editor */}
+                    <div style={{ width: rightPanelWidth, flexShrink:0, background:T.surface, borderLeft: rightPanelWidth > 0 ? `1px solid ${T.border}` : "none", transition:"width 0.3s cubic-bezier(0.4,0,0.2,1)", overflow:"hidden", display:"flex", flexDirection:"column", position: "relative" }}>
+                        <div style={{ width: Math.max(rightPanelWidth, 256), flex: 1, display: "flex", flexDirection: "column" }}>
+                            
+                            {/* IF CHAT IS OPEN */}
+                            {isAgentChatOpen ? (
+                                <React.Fragment>
+                                    <div style={{ padding:"18px 20px", borderBottom:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                            <span style={{ color:T.purple, fontSize:15 }}>✨</span>
+                                            <span style={{ fontSize:15, fontWeight:600, color:T.text, letterSpacing:"-0.2px" }}>Agent 对话</span>
+                                        </div>
+                                        <button onClick={() => setIsAgentChatOpen(false)} style={{ background:"none", border:"none", color:T.textMuted, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center" }}>×</button>
+                                    </div>
+                                    
+                                    <div style={{ flex:1, overflowY:"auto", padding:"20px", display:"flex", flexDirection:"column", gap:20 }}>
+                                        {chatHistory.map((msg, idx) => (
+                                            <div key={idx} style={{ 
+                                                alignSelf: msg.role === 'user' ? "flex-end" : "flex-start", 
+                                                background: msg.role === 'user' ? T.bgSubtle : (T.dark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)"), 
+                                                border: msg.role === 'user' ? `1px solid ${T.borderHover}` : `1px solid ${T.border}`, 
+                                                padding:"16px", 
+                                                borderRadius: msg.role === 'user' ? "12px 12px 0 12px" : "12px 12px 12px 0", 
+                                                fontSize:13, color:T.text, maxWidth:"90%", lineHeight:1.6, 
+                                                boxShadow: msg.role === 'assistant' ? `0 4px 12px rgba(0,0,0,${T.dark?0.2:0.04})` : 'none' 
+                                            }}>
+                                                {msg.role === 'assistant' && (
+                                                    <div style={{ marginBottom:8, fontWeight:600, color:T.text, display:"flex", alignItems:"center", gap:6 }}>
+                                                        <svg viewBox="0 0 100 100" width="14" height="14" fill="none"><path d="M 50 0 A 50 50 0 1 0 100 50 H 75 A 25 25 0 1 1 50 25 V 0 Z" fill={T.text}/><rect x="50" y="25" width="25" height="25" fill="#e800ff"/></svg>
+                                                        GIGA Agent
+                                                    </div>
+                                                )}
+                                                {/* Optional Reference Mini-tag inside user message */}
+                                                {msg.role === 'user' && msg.reference && (
+                                                    <div style={{ fontSize: 10, color: T.purple, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <span>🔗 引用策略: {msg.reference.insight}</span>
+                                                    </div>
+                                                )}
+                                                <div>{formatMessageText(msg.text, T.text)}</div>
+                                            </div>
+                                        ))}
+
+                                        {isGenerating && (
+                                            <div style={{ alignSelf:"flex-start", padding:"8px 16px", fontSize:13, color:T.textMuted, display:"flex", alignItems:"center", gap:6 }}>
+                                                <span className="animate-spin" style={{ fontSize:14 }}>✨</span> 思考中...
+                                            </div>
+                                        )}
+                                        <div ref={chatEndRef} />
+                                    </div>
+
+                                    <div style={{ padding:"16px", borderTop:`1px solid ${T.border}` }}>
+                                        {/* Reference Attachment Preview */}
+                                        {reference && (
+                                            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: T.dark ? "rgba(255,255,255,0.05)" : T.bgSubtle, borderRadius: "10px", marginBottom: "12px", border: `1px solid ${T.borderHover}` }}>
+                                                <div style={{ width: 32, height: 32, borderRadius: 6, background: reference.color, flexShrink: 0, position: "relative", overflow: "hidden" }}>
+                                                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontSize: 8 }}>图</div>
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontSize: 11, color: T.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>引用: {reference.insight}</div>
+                                                    <div style={{ fontSize: 10, color: T.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reference.prompt}</div>
+                                                </div>
+                                                <button onClick={() => { setReference(null); setChatInput(""); }} style={{ background: "none", border: "none", color: T.textMuted, cursor: "pointer", padding: 4, fontSize: 16 }}>×</button>
+                                            </div>
+                                        )}
+
+                                        {/* Shop Agent Exclusive: Copyright Verification Tag */}
+                                        {isShopMockupAgent && (
+                                            <div style={{ marginBottom: 12, display: "flex", gap: 8 }}>
+                                                <button onClick={handleCopyrightVerify} disabled={isGenerating} style={{ background: T.bgSubtle, border: `1px solid ${T.borderHover}`, padding: "6px 12px", borderRadius: 14, fontSize: 11, color: T.text, cursor: isGenerating ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 0.2s", opacity: isGenerating ? 0.6 : 1 }} onMouseEnter={e => !isGenerating && (e.currentTarget.style.background=T.surfaceHover)} onMouseLeave={e => !isGenerating && (e.currentTarget.style.background=T.bgSubtle)}>
+                                                    🛡️ 版权验证
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Inline Agent Menu in Chatbox */}
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                                            <div onClick={() => { setModeOpen(!modeOpen); setMockupOpen(false); setGameplayOpen(false); setModulesOpen(false); }} style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 9px", borderRadius:6, fontSize:10, border:`1px solid ${T.border}`, color:T.text, cursor:"pointer", background: modeOpen ? T.bgSubtle : "transparent", transition: "all 0.2s" }}>
+                                                <span style={{ fontSize:9 }}>{AGENT_MODES.find(m=>m.label===activeAgent)?.icon || "◇"}</span>
+                                                {activeAgent}
+                                                <span style={{ fontSize:7, opacity:0.5, transform:modeOpen?"rotate(180deg)":"none", transition:"transform 0.2s", display:"inline-block" }}>▼</span>
+                                            </div>
+
+                                            {activeAgent === "推广图Agent" && (
+                                                <div onClick={() => setDataAgentActive(!dataAgentActive)} style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 9px", borderRadius:6, fontSize:10, border:`1px solid ${dataAgentActive ? T.text : T.border}`, color: dataAgentActive ? T.text : T.textSub, background: dataAgentActive ? T.bgSubtle : "transparent", cursor:"pointer", transition: "all 0.2s" }}>
+                                                    <span style={{ fontSize:8, opacity: dataAgentActive ? 1 : 0.4, color: dataAgentActive ? T.purple : "inherit" }}>✦</span> 数据智荐Agent
+                                                </div>
+                                            )}
+
+                                            {activeAgent === "商店图Agent" && (
+                                                <div style={{ position: "relative" }}>
+                                                    <div onClick={() => setMockupOpen(!mockupOpen)} style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 9px", borderRadius:6, fontSize:10, border:`1px solid ${mockupSelection ? T.text : T.border}`, color: mockupSelection ? T.text : T.textSub, background: mockupSelection ? T.bgSubtle : "transparent", cursor:"pointer", transition: "all 0.2s" }}>
+                                                        <span style={{ fontSize:8, opacity: mockupSelection ? 1 : 0.4, color: mockupSelection ? T.purple : "inherit" }}>✦</span> 
+                                                        {mockupSelection ? `Mock up: ${mockupSelection}` : "Mock up"}
+                                                    </div>
+                                                    {mockupOpen && (
+                                                        <div style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 8, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: 4, zIndex: 60, width: 120, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                                                            {["Lite ROW", "Lite US", "Main ROW", "Main US"].map(opt => (
+                                                                <div key={opt} onClick={() => { setMockupSelection(opt); setMockupOpen(false); }} style={{ padding: "6px 10px", fontSize: 10, color: T.text, cursor: "pointer", borderRadius: 4, background: mockupSelection === opt ? T.bgSubtle : "transparent" }} onMouseEnter={e => e.currentTarget.style.background = T.bgSubtle} onMouseLeave={e => e.currentTarget.style.background = mockupSelection === opt ? T.bgSubtle : "transparent"}>
+                                                                    {opt}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {activeAgent === "Incentive玩法Agent" && (
+                                                <React.Fragment>
+                                                    <div style={{ position: "relative" }}>
+                                                        <div onClick={() => { setGameplayOpen(!gameplayOpen); setModulesOpen(false); setModeOpen(false); }} style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 9px", borderRadius:6, fontSize:10, border:`1px solid ${gameplaySelection ? T.text : T.border}`, color: gameplaySelection ? T.text : T.textSub, background: gameplaySelection ? T.bgSubtle : "transparent", cursor:"pointer", transition: "all 0.2s" }}>
+                                                            <span style={{ fontSize:8, opacity: gameplaySelection ? 1 : 0.4, color: gameplaySelection ? T.purple : "inherit" }}>✦</span>
+                                                            {gameplaySelection ? `玩法: ${gameplaySelection}` : "玩法选择"}
+                                                        </div>
+                                                        {gameplayOpen && (
+                                                            <div style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 8, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: 4, zIndex: 60, width: 120, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                                                                {["星星", "扫码", "百元", "冲榜"].map(opt => (
+                                                                    <div key={opt} onClick={() => { setGameplaySelection(opt); setGameplayOpen(false); }} style={{ padding: "6px 10px", fontSize: 10, color: T.text, cursor: "pointer", borderRadius: 4, background: gameplaySelection === opt ? T.bgSubtle : "transparent" }} onMouseEnter={e => e.currentTarget.style.background = T.bgSubtle} onMouseLeave={e => e.currentTarget.style.background = gameplaySelection === opt ? T.bgSubtle : "transparent"}>
+                                                                        {opt}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <div style={{ position: "relative" }}>
+                                                        <div onClick={() => { setModulesOpen(!modulesOpen); setGameplayOpen(false); setModeOpen(false); }} style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 9px", borderRadius:6, fontSize:10, border:`1px solid ${modulesSelection.length ? T.text : T.border}`, color: modulesSelection.length ? T.text : T.textSub, background: modulesSelection.length ? T.bgSubtle : "transparent", cursor:"pointer", transition: "all 0.2s" }}>
+                                                            <span style={{ fontSize:8, opacity: modulesSelection.length ? 1 : 0.4, color: modulesSelection.length ? T.purple : "inherit" }}>✦</span>
+                                                            {modulesSelection.length ? `模块: ${modulesSelection.length} 项` : "模块选择"}
+                                                        </div>
+                                                        {modulesOpen && (
+                                                            <div style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 8, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: 4, zIndex: 60, width: 140, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
+                                                                {["Feed banner", "成功状态", "失败状态", "顶Tab", "回流页", "活动结束"].map(opt => {
+                                                                    const isSelected = modulesSelection.includes(opt);
+                                                                    return (
+                                                                        <div key={opt} onClick={(e) => { e.stopPropagation(); if (isSelected) setModulesSelection(modulesSelection.filter(x => x !== opt)); else setModulesSelection([...modulesSelection, opt]); }} style={{ padding: "6px 10px", fontSize: 10, color: T.text, cursor: "pointer", borderRadius: 4, display: "flex", justifyContent: "space-between" }} onMouseEnter={e => e.currentTarget.style.background = T.bgSubtle} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                                                            {opt}
+                                                                            {isSelected && <span style={{ color: T.purple }}>✓</span>}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </React.Fragment>
+                                            )}
+                                        </div>
+
+                                        {/* Expandable Mode Panel inside Chatbox */}
+                                        <div style={{ maxHeight: modeOpen ? 400 : 0, opacity: modeOpen ? 1 : 0, overflow: "hidden", transition: "max-height 0.4s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s ease", background: T.dark ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.02)", marginBottom: modeOpen ? 12 : 0, borderRadius: 8 }}>
+                                            <div style={{ padding: 12, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, border: `1px solid ${T.border}` }}>
+                                                {AGENT_MODES.map(opt => (
+                                                    <div key={opt.id} onClick={() => { setActiveAgent(opt.label); setModeOpen(false); }} style={{ padding: 8, borderRadius: 6, border: `1px solid ${activeAgent === opt.label ? T.borderHover : T.border}`, background: activeAgent === opt.label ? T.bgSubtle : "transparent", cursor: "pointer", transition: "all 0.15s", display: "flex", flexDirection: "column" }}>
+                                                        <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
+                                                            <span style={{ fontSize:10, color: T.textMuted }}>{opt.icon}</span>
+                                                            <span style={{ fontSize:10, fontWeight:600, color: T.text }}>{opt.label}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Input Box Area */}
+                                        <div style={{ display:"flex", alignItems:"center", gap:8, background:T.bgSubtle, border:`1px solid ${T.border}`, borderRadius:12, padding:"8px 12px", transition:"border-color 0.2s" }}>
+                                            <div className="relative tooltip-group" style={{ display: "flex" }}>
+                                                <button style={{ background:"transparent", border:"none", color:T.textMuted, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                                </button>
+                                                <div style={{ position:"absolute", bottom:"100%", left:"50%", transform:"translateX(-50%)", marginBottom:"8px", padding:"6px 10px", background: T.dark ? "#2a2a2a" : "#1a1a1a", color: "#fff", fontSize: 11, border: `1px solid ${T.dark ? "#3a3a3a" : "#2a2a2a"}`, borderRadius:"6px", whiteSpace:"nowrap", opacity:0, pointerEvents:"none", transition:"opacity 0.2s", zIndex:50 }} className="tooltip-box">可上传图片/视频/PRD/代码/文件</div>
+                                            </div>
+                                            <input 
+                                                value={chatInput} 
+                                                onChange={e=>setChatInput(e.target.value)} 
+                                                onKeyDown={(e) => { if(e.key === 'Enter') handleSendMessage() }}
+                                                placeholder="输入调整指令..." 
+                                                disabled={isGenerating}
+                                                style={{ flex:1, background:"transparent", border:"none", outline:"none", color:T.text, fontSize:13 }} 
+                                            />
+                                            <button 
+                                                onClick={handleSendMessage}
+                                                disabled={isGenerating || (!chatInput.trim() && !reference)}
+                                                style={{ background:T.text, color:T.bg, border:"none", borderRadius:8, padding:"6px 12px", fontSize:11, fontWeight:500, cursor: (isGenerating || (!chatInput.trim() && !reference)) ? "not-allowed" : "pointer", transition:"opacity 0.2s", opacity: (isGenerating || (!chatInput.trim() && !reference)) ? 0.5 : 1 }}
+                                            >
+                                                ✨ 发送
+                                            </button>
+                                        </div>
+                                    </div>
+                                </React.Fragment>
+                            ) : (
+                                /* IF STANDARD NODE EDITOR IS OPEN */
+                                isStandard && (
+                                    <React.Fragment>
+                                        <div style={{ padding:"18px 18px 0" }}>
+                                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:7 }}>
+                                                <div style={{ fontSize:9, color:T.textFaint, textTransform:"uppercase", letterSpacing:"0.09em" }}>Node</div>
+                                                <button onClick={() => setIsAgentChatOpen(true)} title="打开 AI 助理" style={{ background:"transparent", border:`1px solid ${T.borderHover}`, borderRadius: 6, color:T.purple, cursor:"pointer", padding:"2px 6px", fontSize:12, display:"flex", alignItems:"center" }}>✨ AI</button>
+                                            </div>
+                                            <div style={{ fontSize:14, fontWeight:400, fontFamily:T.serif, letterSpacing:"-0.2px", marginBottom:3, color:T.text }}>{selNode ? selNode.label : "Select a Node"}</div>
+                                            <div style={{ fontSize:10, color:T.textMuted, fontFamily:T.mono, marginBottom:18 }}>{selNode ? `${selNode.type} · ${selNode.id}` : "--"}</div>
+                                        </div>
+                                        <div style={{ height:1, background:T.border, margin:"0 18px" }} />
+                                        <div style={{ padding:"14px 18px", flex:1, overflowY:"auto" }}>
+                                            {[
+                                                {label:"Aspect Ratio",value:"1:1",    options:["1:1","9:16","4:5","16:9"]},
+                                                {label:"Style",       value:"Product",options:["Product","Lifestyle","Editorial","Minimal"]},
+                                                {label:"Background",  value:"Studio", options:["Studio","Outdoor","Abstract","Gradient"]},
+                                            ].map(field => (
+                                                <div key={field.label} style={{ marginBottom:14 }}>
+                                                    <div style={{ fontSize:10, color:T.textMuted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.06em", opacity: selNode ? 1 : 0.4 }}>{field.label}</div>
+                                                    <div style={{ display:"flex", flexWrap:"wrap", gap:4, opacity: selNode ? 1 : 0.4 }}>
+                                                        {field.options.map(opt => (
+                                                            <button key={opt} disabled={!selNode} style={{ padding:"4px 9px", borderRadius:5, border:`1px solid ${opt===field.value?T.accentBg:T.border}`, background:opt===field.value?T.accentBg:"transparent", color:opt===field.value?T.accentFg:T.textSub, fontSize:11, cursor:selNode?"pointer":"default", transition:"all 0.15s" }}>{opt}</button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <div style={{ marginBottom:14, opacity: selNode ? 1 : 0.4 }}>
+                                                <div style={{ fontSize:10, color:T.textMuted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.06em" }}>Prompt</div>
+                                                <textarea disabled={!selNode} rows={3} placeholder="Describe the image…" style={{ width:"100%", padding:"8px 10px", borderRadius:8, border:`1px solid ${T.border}`, background:T.bgSubtle, fontSize:12, color:T.text, resize:"none", outline:"none", fontFamily:T.sans, lineHeight:1.5 }} />
+                                            </div>
+                                            <button disabled={!selNode} style={{ width:"100%", padding:"9px", borderRadius:8, border:"none", background:T.accentBg, color:T.accentFg, fontSize:12, fontWeight:500, cursor:selNode?"pointer":"default", opacity: selNode ? 1 : 0.4 }}>▶ Generate Node</button>
+                                        </div>
+                                    </React.Fragment>
+                                )
+                            )}
+                        </div>
+                    </div>
+
+                </div>
+            );
+        }
+
+        // ─── Studio App ───
+        function StudioApp({ isDark, setIsDark }) {
+            const [activeNav, setActiveNav] = useState("groot");
+            const [activeGroot, setActiveGroot] = useState(null);
+            const [grootView, setGrootView] = useState("home");
+            const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+            const [isAgentChatOpen, setIsAgentChatOpen] = useState(false);
+            
+            const tokens = makeTokens(isDark);
+            const toggleDark = () => setIsDark(d => !d);
+            const sidebarW = sidebarCollapsed ? SIDEBAR_CW : SIDEBAR_W;
+
+            const handleOpenCanvas = (id) => { setActiveGroot(id); setGrootView("canvas"); };
+            const handleSelectSession = (id) => { setActiveGroot(id); setGrootView("home"); };
+            
+            const handleStartGeneration = (prompt, agent, useDataAgent, mockupSelection, gameplaySelection, modulesSelection) => {
+                if (agent === "推广图Agent" && useDataAgent) {
+                    setActiveGroot("promo_data_agent");
+                    setGrootView("canvas");
+                    setSidebarCollapsed(true);
+                    setIsAgentChatOpen(true);
+                } 
+                else if (agent === "商店图Agent" && mockupSelection) {
+                    setActiveGroot("shop_mockup_agent");
+                    setGrootView("canvas");
+                    setSidebarCollapsed(true);
+                    setIsAgentChatOpen(true);
+                }
+                else if (agent === "Incentive玩法Agent" && (gameplaySelection || modulesSelection.length > 0)) {
+                    setActiveGroot("incentive_agent_canvas");
+                    setGrootView("canvas");
+                    setSidebarCollapsed(true);
+                    setIsAgentChatOpen(true);
+                } else {
+                    setActiveGroot("g1");
+                    setGrootView("canvas");
+                    setSidebarCollapsed(false);
+                    setIsAgentChatOpen(false); 
+                }
+            };
+
+            let activeSession = GROOT_HISTORY.find(g => g.id === activeGroot) || null;
+            if (activeGroot === "promo_data_agent") {
+                activeSession = { id: "promo_data_agent", name: "推广策略推荐 Canvas", time: "Just now", nodeCount: 10, status: "running" };
+            } else if (activeGroot === "shop_mockup_agent") {
+                activeSession = { id: "shop_mockup_agent", name: "商店图 Mock up", time: "Just now", nodeCount: 4, status: "running" };
+            } else if (activeGroot === "incentive_agent_canvas") {
+                activeSession = { id: "incentive_agent_canvas", name: "Incentive 素材矩阵", time: "Just now", nodeCount: 10, status: "running" };
+            }
+
+            const isCanvasView = activeNav==="groot" && grootView==="canvas" && activeGroot;
+
+            return (
+                <ThemeCtx.Provider value={tokens}>
+                    <div style={{ display:"flex", height:"100vh", background:tokens.bg, fontFamily:tokens.sans, transition:"background 0.25s", color: tokens.text }}>
+                        <Sidebar
+                            collapsed={sidebarCollapsed}
+                            onToggleCollapse={() => setSidebarCollapsed(c => !c)}
+                            activeNav={activeNav}
+                            setActiveNav={(k) => { setActiveNav(k); if (k!=="groot") { setActiveGroot(null); setGrootView("home"); setIsAgentChatOpen(false); } }}
+                            grootHistory={GROOT_HISTORY}
+                            activeGroot={activeGroot}
+                            setActiveGroot={setActiveGroot}
+                            grootView={grootView}
+                            setGrootView={setGrootView}
+                            isDark={isDark}
+                            toggleDark={toggleDark}
+                            isAgentChatOpen={isAgentChatOpen}
+                        />
+                        <div style={{
+                            marginLeft: sidebarW, flex:1, height:"100vh",
+                            overflow: isCanvasView || ["insights","production","automation","aigclab"].includes(activeNav) ? "hidden" : "auto",
+                            background: tokens.pageBg,
+                            transition:"margin-left 0.22s cubic-bezier(0.4,0,0.2,1), background 0.25s",
+                        }}>
+                            {activeNav==="groot" && grootView==="home" && (
+                                <GrootSessionHome
+                                    session={activeSession && !["promo_data_agent", "shop_mockup_agent", "incentive_agent_canvas"].includes(activeSession.id) ? activeSession : null}
+                                    history={GROOT_HISTORY}
+                                    onOpenCanvas={handleOpenCanvas}
+                                    onSelectSession={handleSelectSession}
+                                    onStartGeneration={handleStartGeneration}
+                                />
+                            )}
+                            {isCanvasView && (
+                                <GrootCanvas
+                                    historyId={activeGroot}
+                                    historyItem={activeSession}
+                                    onBack={() => { setActiveGroot(null); setGrootView("home"); setIsAgentChatOpen(false); }}
+                                    isAgentChatOpen={isAgentChatOpen}
+                                    setIsAgentChatOpen={setIsAgentChatOpen}
+                                />
+                            )}
+                            {activeNav==="insights"   && <InsightsView/>}
+                            {activeNav==="production" && <ProductionView/>}
+                            {activeNav==="automation" && <AutomationView/>}
+                            {activeNav==="aigclab"    && <AIGCLabView/>}
+                            {!["insights","groot","production","automation","aigclab"].includes(activeNav) && (
+                                <div style={{ padding:"40px", color:tokens.textMuted, fontSize:14 }}>
+                                    {activeNav.charAt(0).toUpperCase()+activeNav.slice(1)} — coming soon
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </ThemeCtx.Provider>
+            );
+        }
+
+        // --- Entry Point Wrapper ---
+        const rootElement = document.getElementById('react-app-container');
+        const root = ReactDOM.createRoot(rootElement);
+        
+        const AppWrapper = () => {
+            const [isDark, setIsDark] = useState(true);
+            return (
+                <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
+                    <StudioApp isDark={isDark} setIsDark={setIsDark} />
+                </div>
+            );
+        };
+
+        root.render(<AppWrapper />);
+    </script>
+</body>
+</html>
